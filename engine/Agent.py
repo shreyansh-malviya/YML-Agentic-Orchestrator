@@ -10,6 +10,7 @@ from datetime import datetime
 # from .llms import gemini_response, get_llm_function
 from YAMLParser import YAMLParser
 from llms import gemini_response, get_llm_function
+from memory import store_context, retrieve_context, clear_memory, get_memory_stats
 
 available_models = ["gemini-2.5-flash", "gemini-2.5-pro"]
 
@@ -26,6 +27,7 @@ def load_yaml_data(file_path):
 
 def clear_context():
     """Clear/reset the context file for a fresh start"""
+    # Clear JSON backup file
     context_file = Path(__file__).parent / "context" / "raw.json"
     context_file.parent.mkdir(parents=True, exist_ok=True)
     
@@ -37,11 +39,15 @@ def clear_context():
     with open(context_file, "w", encoding="utf-8") as f:
         json.dump(initial_data, f, indent=2, ensure_ascii=False)
     
-    print("🗑️  Context file cleared for fresh start")
+    # Clear RAG memory
+    clear_memory()
+    
+    print("🗑️  Context cleared for fresh start")
 
 
 def save_to_context(role, response):
-    """Save conversation to raw.json in context folder"""
+    """Save conversation to raw.json (backup) and RAG memory (smart retrieval)"""
+    # Save to JSON backup file
     context_file = Path(__file__).parent / "context" / "raw.json"
     context_file.parent.mkdir(parents=True, exist_ok=True)
     
@@ -62,34 +68,25 @@ def save_to_context(role, response):
     # Write back to file
     with open(context_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    
+    # Store in RAG memory for intelligent retrieval
+    store_context(role, response)
 
 
-def read_context():
-    """Read all previous conversations from context file"""
-    context_file = Path(__file__).parent / "context" / "raw.json"
+def read_context_for_agent(agent_prompt: str, max_memories: int = 5):
+    """
+    Retrieve only relevant context using RAG
     
-    if not context_file.exists():
-        return ""
+    Args:
+        agent_prompt: Current agent's prompt (used for semantic search)
+        max_memories: Maximum number of relevant memories to retrieve
     
-    try:
-        with open(context_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        
-        conversations = data.get("conversations", [])
-        if not conversations:
-            return ""
-        
-        # Format conversations as context string
-        context_parts = []
-        for conv in conversations:
-            role = conv.get("role", "Unknown")
-            response = conv.get("response", "")
-            context_parts.append(f"{role}: {response}")
-        
-        return "\n\n".join(context_parts)
-    except Exception as e:
-        print(f"⚠ Error reading context: {e}")
-        return ""
+    Returns:
+        Formatted context string with only relevant previous conversations
+    """
+    # Use RAG to retrieve only relevant context
+    relevant_context = retrieve_context(agent_prompt, k=max_memories)
+    return relevant_context
 
 
 def execute_sequential_workflow(yaml_data):
@@ -125,12 +122,13 @@ def execute_sequential_workflow(yaml_data):
         
         base_prompt = f"you are {role} and your motive is {goal} {description} {instructions}"
         
-        # For agents after the first one, add context from previous agents
+        # For agents after the first one, retrieve ONLY RELEVANT context using RAG
         if step_idx > 0:
-            previous_context = read_context()
-            if previous_context:
-                prompt = f"{base_prompt}\n\nPrevious Context:\n{previous_context}"
-                print(f"\n📚 Including context from {step_idx} previous agent(s)")
+            # Retrieve top 3-5 most relevant previous conversations
+            relevant_context = read_context_for_agent(base_prompt, max_memories=5)
+            if relevant_context:
+                prompt = f"{base_prompt}\n\nRelevant Previous Context:\n{relevant_context}"
+                print(f"\n🧠 Including relevant context (max 5 memories)")
             else:
                 prompt = base_prompt
         else:
@@ -151,15 +149,9 @@ def execute_sequential_workflow(yaml_data):
         model_available = model_name in available_models    
         
         # If no model config, use Gemini
-        save_to_context("User", prompt)
+        save_to_context("User", base_prompt)
         if not model_available:
             print(f"⚠ Model '{model_name}' not configured, using Gemini...")
-            # config = {
-            #     "model": "gemini-1.5-flash",
-            #     "temperature": 0.7,
-            #     "max_tokens": 2048
-            # }
-            # response = gemini_response(prompt, config)
             response = gemini_response(prompt)
         else:
             # Get LLM function based on provider
@@ -286,7 +278,7 @@ def execute_parallel_workflow(yaml_data):
 def run_agent(yaml_file):
     """Main function to run agent workflow autonomously"""
     # Clear context for fresh start
-    clear_context()
+    # clear_context()
     
     # Load YAML data
     print(f"🔄 Loading configuration from: {yaml_file}")
@@ -310,9 +302,12 @@ def run_agent(yaml_file):
     print("\n" + "="*70)
     print("✅ Workflow execution completed!")
     print("💾 Conversation saved to context/raw.json")
+    
+    # Show memory stats
+    stats = get_memory_stats()
+    print(f"🧠 Total memories stored: {stats['total_memories']}")
     print("="*70)
 
 
 if __name__ == "__main__":
     run_agent(input_file)
-

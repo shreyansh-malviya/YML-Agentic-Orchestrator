@@ -1,0 +1,5 @@
+{"role": "Researcher", "text": "Python is a high-level, interpreted programming language known for its simplicity and readability. It's widely used in web development, data science, and AI."}
+{"role": "Data Scientist", "text": "Machine learning algorithms can be trained on large datasets to make predictions. Common algorithms include linear regression, decision trees, and neural networks."}
+{"role": "Engineer", "text": "FAISS is a library developed by Facebook AI for efficient similarity search and clustering of dense vectors. It's optimized for large-scale applications."}
+{"role": "AI Expert", "text": "RAG (Retrieval Augmented Generation) combines retrieval and generation to provide context-aware responses. It's particularly useful for managing long conversations."}
+{"role": "Architect", "text": "Vector databases store embeddings and enable semantic search. They're essential for building modern AI applications with context awareness."}

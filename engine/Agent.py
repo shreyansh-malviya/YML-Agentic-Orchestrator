@@ -64,6 +64,34 @@ def save_to_context(role, response):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def read_context():
+    """Read all previous conversations from context file"""
+    context_file = Path(__file__).parent / "context" / "raw.json"
+    
+    if not context_file.exists():
+        return ""
+    
+    try:
+        with open(context_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        conversations = data.get("conversations", [])
+        if not conversations:
+            return ""
+        
+        # Format conversations as context string
+        context_parts = []
+        for conv in conversations:
+            role = conv.get("role", "Unknown")
+            response = conv.get("response", "")
+            context_parts.append(f"{role}: {response}")
+        
+        return "\n\n".join(context_parts)
+    except Exception as e:
+        print(f"⚠ Error reading context: {e}")
+        return ""
+
+
 def execute_sequential_workflow(yaml_data):
     """Execute sequential workflow"""
     print(f"hereee: {yaml_data}")
@@ -73,7 +101,7 @@ def execute_sequential_workflow(yaml_data):
     
     steps = yaml_data["workflow"]["steps"]
     
-    for role in steps:
+    for step_idx, role in enumerate(steps):
         print("we got a role to process:", role)
         # Find agent by ID
         agent_data = None
@@ -95,7 +123,19 @@ def execute_sequential_workflow(yaml_data):
         description = agent_data.get("description", "")
         instructions = agent_data.get("instruction", "")
         
-        prompt = f"you are {role} and your motive is {goal} {description} {instructions}"
+        base_prompt = f"you are {role} and your motive is {goal} {description} {instructions}"
+        
+        # For agents after the first one, add context from previous agents
+        if step_idx > 0:
+            previous_context = read_context()
+            if previous_context:
+                prompt = f"{base_prompt}\n\nPrevious Context:\n{previous_context}"
+                print(f"\n📚 Including context from {step_idx} previous agent(s)")
+            else:
+                prompt = base_prompt
+        else:
+            prompt = base_prompt
+            print("\n🆕 First agent - no previous context")
         
         print(f"\n{'='*70}")
         print(f"Agent: {role}")

@@ -3,7 +3,9 @@ Agent Workflow Execution System
 Autonomous agent execution with YAML configuration
 """
 
+import json
 from pathlib import Path
+from datetime import datetime
 # from .YAMLParser import YAMLParser
 # from .llms import gemini_response, get_llm_function
 from YAMLParser import YAMLParser
@@ -22,13 +24,44 @@ def load_yaml_data(file_path):
     return data
 
 
-def save_to_context(role, response):
-    """Save conversation to raw.txt in context folder"""
-    context_file = Path(__file__).parent / "context" / "raw.txt"
+def clear_context():
+    """Clear/reset the context file for a fresh start"""
+    context_file = Path(__file__).parent / "context" / "raw.json"
     context_file.parent.mkdir(parents=True, exist_ok=True)
     
-    with open(context_file, "a", encoding="utf-8") as f:
-        f.write(f"{role}: {response}\n\n")
+    initial_data = {
+        "workflow_start": datetime.now().isoformat(),
+        "conversations": []
+    }
+    
+    with open(context_file, "w", encoding="utf-8") as f:
+        json.dump(initial_data, f, indent=2, ensure_ascii=False)
+    
+    print("🗑️  Context file cleared for fresh start")
+
+
+def save_to_context(role, response):
+    """Save conversation to raw.json in context folder"""
+    context_file = Path(__file__).parent / "context" / "raw.json"
+    context_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Read existing data
+    if context_file.exists():
+        with open(context_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    else:
+        data = {"workflow_start": datetime.now().isoformat(), "conversations": []}
+    
+    # Append new conversation
+    data["conversations"].append({
+        "timestamp": datetime.now().isoformat(),
+        "role": role,
+        "response": response
+    })
+    
+    # Write back to file
+    with open(context_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 def execute_sequential_workflow(yaml_data):
@@ -212,6 +245,9 @@ def execute_parallel_workflow(yaml_data):
 
 def run_agent(yaml_file):
     """Main function to run agent workflow autonomously"""
+    # Clear context for fresh start
+    clear_context()
+    
     # Load YAML data
     print(f"🔄 Loading configuration from: {yaml_file}")
     yaml_data = load_yaml_data(yaml_file)
@@ -233,7 +269,7 @@ def run_agent(yaml_file):
     
     print("\n" + "="*70)
     print("✅ Workflow execution completed!")
-    print("💾 Conversation saved to context/raw.txt")
+    print("💾 Conversation saved to context/raw.json")
     print("="*70)
 
 

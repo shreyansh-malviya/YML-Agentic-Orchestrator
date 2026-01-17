@@ -8,12 +8,11 @@ from pathlib import Path
 # from .llms import gemini_response, get_llm_function
 from YAMLParser import YAMLParser
 from llms import gemini_response, get_llm_function
-from memory.rag import store_memory, retrieve_memory, get_context
 
 available_models = ["gemini-2.5-flash", "gemini-2.5-pro"]
 
 # Configuration
-input_file = "D:\\D\\Projects\\YML Parser + Agentic Workflow\\engine\\test\\test2.yml"  # User will provide this
+input_file = "D:\\D\\Projects\\YML Parser + Agentic Workflow\\engine\\test\\test1.yml"  # User will provide this
 
 
 def load_yaml_data(file_path):
@@ -24,20 +23,16 @@ def load_yaml_data(file_path):
 
 
 def save_to_context(role, response):
-    """Save conversation to raw.txt in context folder AND to RAG memory"""
-    # Save to text file (backup/logging)
+    """Save conversation to raw.txt in context folder"""
     context_file = Path(__file__).parent / "context" / "raw.txt"
     context_file.parent.mkdir(parents=True, exist_ok=True)
     
     with open(context_file, "a", encoding="utf-8") as f:
         f.write(f"{role}: {response}\n\n")
-    
-    # Store in RAG memory for intelligent retrieval
-    store_memory(response, role=role)
 
 
 def execute_sequential_workflow(yaml_data):
-    """Execute sequential workflow with RAG context"""
+    """Execute sequential workflow"""
     print(f"hereee: {yaml_data}")
     print("\n" + "="*70)
     print("EXECUTING SEQUENTIAL WORKFLOW")
@@ -45,7 +40,7 @@ def execute_sequential_workflow(yaml_data):
     
     steps = yaml_data["workflow"]["steps"]
     
-    for step_idx, role in enumerate(steps):
+    for role in steps:
         print("we got a role to process:", role)
         # Find agent by ID
         agent_data = None
@@ -67,25 +62,14 @@ def execute_sequential_workflow(yaml_data):
         description = agent_data.get("description", "")
         instructions = agent_data.get("instruction", "")
         
-        base_prompt = f"you are {role} and your motive is {goal} {description} {instructions}"
-        
-        # Retrieve relevant context from previous agents (only for 2nd agent onwards)
-        if step_idx > 0:
-            relevant_context = get_context(base_prompt, top_k=3)
-            if relevant_context:
-                prompt = f"{base_prompt}\n\nRelevant previous context:\n{relevant_context}"
-                print(f"\n🧠 Retrieved {len(relevant_context.split('[Memory'))-1} relevant memories")
-            else:
-                prompt = base_prompt
-        else:
-            prompt = base_prompt
+        prompt = f"you are {role} and your motive is {goal} {description} {instructions}"
         
         print(f"\n{'='*70}")
         print(f"Agent: {role}")
         print(f"Role: {role}")
         print(f"Goal: {goal}")
         print(f"{'='*70}")
-        print(f"\n📝 Base Prompt: {base_prompt}")
+        print(f"\n📝 Prompt: {prompt}")
         
         # Get model configuration
         model_name = agent_data.get("model")
@@ -119,7 +103,7 @@ def execute_sequential_workflow(yaml_data):
 
 
 def execute_parallel_workflow(yaml_data):
-    """Execute parallel workflow with RAG context"""
+    """Execute parallel workflow"""
     print("\n" + "="*70)
     print("EXECUTING PARALLEL WORKFLOW")
     print("="*70)
@@ -149,46 +133,28 @@ def execute_parallel_workflow(yaml_data):
         description = agent_data.get("description", "")
         instructions = agent_data.get("instruction", "")
         
-        base_prompt = f"you are {role} and your motive is {goal} {description} {instructions}"
-        
-        # Retrieve relevant context (branches can use context from previous workflows)
-        relevant_context = get_context(base_prompt, top_k=2)
-        if relevant_context:
-            prompt = f"{base_prompt}\n\nRelevant context:\n{relevant_context}"
-            print(f"\n🧠 Retrieved {len(relevant_context.split('[Memory'))-1} relevant memories")
-        else:
-            prompt = base_prompt
+        prompt = f"you are {role} and your motive is {goal} {description} {instructions}"
         
         print(f"\n{'='*70}")
         print(f"Branch Agent: {branch_name}")
         print(f"Role: {role}")
         print(f"Goal: {goal}")
         print(f"{'='*70}")
-        print(f"\n📝 Base Prompt: {base_prompt}")
+        print(f"\n📝 Prompt: {prompt}")
         
         # Get model configuration
-        model_name = agent_data.get("model")        
-        # If no model config, use Gemini
-
-        model_available = model_name in available_models    
+        model_name = agent_data.get("model")
+        model_available = model_name in available_models
         
         # If no model config, use Gemini
         save_to_context("User", prompt)
         if not model_available:
             print(f"⚠ Model '{model_name}' not configured, using Gemini...")
-            # config = {
-            #     "model": "gemini-1.5-flash",
-            #     "temperature": 0.7,
-            #     "max_tokens": 2048
-            # }
-            # response = gemini_response(prompt, config)
-            response = gemini_response(prompt, config=None)
+            response = gemini_response(prompt)
         else:
             # Get LLM function based on provider
-            # provider = model_config.get("provider", "google")
-            print(f"🔧 Using google provider with model ${model_name}")
+            print(f"🔧 Using google provider with model {model_name}")
             response = get_llm_function(prompt, model_name)
-            # response = llm_function(prompt, model_config)
         
         # Display response
         print(f"\n✅ {role} Response:")
@@ -218,38 +184,24 @@ def execute_parallel_workflow(yaml_data):
             description = agent_data.get("description", "")
             instructions = agent_data.get("instruction", "")
             
-            base_prompt = f"you are {role} and your motive is {goal} {description} {instructions}"
+            # Include all branch responses in prompt
+            context = "\n".join([f"Previous response {i+1}: {resp}" for i, resp in enumerate(branch_responses)])
+            prompt = f"you are {role} and your motive is {goal} {description} {instructions}\n\nPrevious context:\n{context}"
             
-            # Get relevant context from RAG instead of all branch responses
-            relevant_context = get_context(base_prompt, top_k=5)
-            
-            if relevant_context:
-                prompt = f"{base_prompt}\n\nRelevant context from previous agents:\n{relevant_context}"
-                print(f"\n🧠 Retrieved {len(relevant_context.split('[Memory'))-1} relevant memories for consolidation")
-            else:
-                prompt = base_prompt
-            
-            print(f"\n📝 Base Prompt: {base_prompt}")
+            print(f"\n📝 Prompt: {prompt}")
             
             # Get model configuration
             model_name = agent_data.get("model")
-            
-            model_available = model_name in available_models    
+            model_available = model_name in available_models
             
             # If no model config, use Gemini
             save_to_context("User", prompt)
-            if not model_available:                # config = {
-                #     "model": "gemini-1.5-flash",
-                #     "temperature": 0.7,
-                #     "max_tokens": 2048
-                # }
-                # response = gemini_response(prompt, config)
-                response = gemini_response(prompt, config=None)
+            if not model_available:
+                print(f"⚠ Model '{model_name}' not configured, using Gemini...")
+                response = gemini_response(prompt)
             else:
-                # provider = model_config.get("provider", "google")
-                print(f"🔧 Using google provider with model ${model_name}")
+                print(f"🔧 Using google provider with model {model_name}")
                 response = get_llm_function(prompt, model_name)
-                # response = llm_function(prompt, model_config)
             
             print(f"\n✅ {role} Final Response:")
             print(response)
@@ -259,18 +211,7 @@ def execute_parallel_workflow(yaml_data):
 
 
 def run_agent(yaml_file):
-    """Main function to run agent workflow"""
-    # Load YAML data
-    print(f"Loading configuration from: {yaml_file}")
-    yaml_data = load_yaml_data(yaml_file)
-    
-    print(f"\n✓ Configuration loaded successfully")
-    print(f"  Agents: {len(yaml_data['agents'])}")
-    print(f"  Workflow Type: {yaml_data['workflow']['type']}")
-    
-    # Get user prompt interactively
-    print("\n" + "="*70) 
-    # autonomously"""
+    """Main function to run agent workflow autonomously"""
     # Load YAML data
     print(f"🔄 Loading configuration from: {yaml_file}")
     yaml_data = load_yaml_data(yaml_file)
@@ -292,10 +233,10 @@ def run_agent(yaml_file):
     
     print("\n" + "="*70)
     print("✅ Workflow execution completed!")
-    print("💾")
+    print("💾 Conversation saved to context/raw.txt")
+    print("="*70)
 
 
 if __name__ == "__main__":
     run_agent(input_file)
-    print("  Conversation saved to context/raw.txt")
 

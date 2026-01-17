@@ -5,6 +5,10 @@ agents:
 
   - id: writer
     role: Content Writer
+    goal: Write 80 word research paper using the research
+
+  - id: summarizer
+    role: Summarize Content
     goal: Write a concise summary using the research
 
 workflow:
@@ -12,3 +16,4 @@ workflow:
   steps:
     - agent: researcher
     - agent: writer
+    - agent: summarizer

@@ -1,0 +1,24 @@
+agents:
+  - id: analyst
+    role: Data Analyst
+    goal: Analyze CSV data and summarize trends
+    tools:
+      - python
+
+  - id: frontend_dev
+    role: Frontend Developer  
+    goal: Develop user interface components
+    tools:
+      - javascript
+
+
+workflow:
+  type: sequential
+  steps:
+    - agent: analyst
+    - agent: frontend_dev
+
+
+
+
+

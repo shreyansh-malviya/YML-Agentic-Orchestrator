@@ -1,0 +1,77 @@
+agents:
+  - id: "coordinator_agent_1"
+    role: "Coordinator Agent"
+    goal: "Coordinate multiple agents to produce a final high-quality result"
+    description: "Manages workflow, delegates tasks, and produces final output"
+    model: claude_sonnet
+    tools:
+      - python
+    instruction: |
+      You are the coordinator agent.
+      Your responsibilities:
+      - Understand the task
+      - Delegate work to sub-agents
+      - Combine responses
+      - Produce final output
+    sub_agents:
+      - researcher_agent_1
+      - analyst_agent_1
+      - writer_agent_1
+
+  - id: "researcher_agent_1"
+    role: "Research Assistant"
+    goal: "Collect accurate and relevant information"
+    model: default_model
+    tools:
+      - deep-research
+      - web_search
+    instruction: |
+      Research the given topic thoroughly and extract key insights.
+
+  - id: "analyst_agent_1"
+    role: "Data Analyst"
+    goal: "Analyze structured data and derive insights"
+    model: default_model
+    tools:
+      - python
+    instruction: |
+      Analyze provided data and summarize trends.
+
+  - id: "writer_agent_1"
+    role: "Content Writer"
+    goal: "Write a concise and clear explanation"
+    model: default_model
+    tools:
+      - text-editor
+    instruction: |
+      Write a final summary based on provided context.
+
+  - id: "reviewer_agent_1"
+    role: "Reviewer Agent"
+    goal: "Review and consolidate outputs from parallel agents"
+    model: default_model
+    instruction: |
+      Review inputs from all branches and produce a consolidated response.
+
+workflow:
+  type: parallel
+  branches:
+    - coordinator_agent_1
+    - researcher_agent_1
+    - analyst_agent_1
+    - writer_agent_1
+  then:
+    agent: reviewer_agent_1
+
+models:
+  default_model:
+    provider: openai
+    model: gpt-4.1
+    temperature: 0.3
+    max_tokens: 4096
+
+  claude_sonnet:
+    provider: anthropic
+    model: claude-sonnet-4-0
+    temperature: 0.2
+    max_tokens: 64000

@@ -3,45 +3,57 @@ LLM Interface Module
 Provides response functions for different language models.
 """
 
-from logging import config
 import os
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 
-def gemini_response(prompt: str, model_config=None) -> str:
+def gemini_response(prompt: str, model_config: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Get response from Google Gemini model.
+    
+    Args:
+        prompt: The input prompt
+        model_config: Model configuration dict with temperature, max_tokens, etc.
+        
+    Returns:
+        Response string from Gemini
+    """
     try:
         import google.generativeai as genai
-        import os
-
-        # api_key = os.getenv("GEMINI_API_KEY")  # <-- use env var
-        api_key = "AIzaSyC5k8ezxQzUjTzIff1T0gFMWglpLw297P4"
-
+        
+        # Get API key from environment
+        api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            return "[Error: GEMINI_API_KEY not found]"
-
+            return "[Error: GEMINI_API_KEY not found in environment. Set it in .env file]"
+        
         genai.configure(api_key=api_key)
-
-        model_name = model_config.get("model", "gemini-flash-latest") if model_config else "gemini-2.5-flash"
+        
+        # Get model configuration
+        model_name = model_config.get("model", "gemini-2.5-flash") if model_config else "gemini-2.5-flash"
         temperature = model_config.get("temperature", 0.7) if model_config else 0.7
-        max_tokens = model_config.get("max_tokens", 2048) if model_config else 2048
-
+        max_tokens = model_config.get("max_tokens", 8096) if model_config else 8096
+        
         generation_config = genai.GenerationConfig(
             temperature=temperature,
             max_output_tokens=max_tokens,
         )
-
+        
         model = genai.GenerativeModel(
             model_name=model_name,
             generation_config=generation_config
         )
-
+        
         response = model.generate_content(prompt)
         return response.text
-
+        
     except ImportError:
-        return "[Error: pip install google-generativeai]"
+        return "[Error: google-generativeai package not installed. Run: pip install google-generativeai]"
     except Exception as e:
-        return f"[Error calling Gemini: {e}]"
+        return f"[Error calling Gemini: {str(e)}]"
 
 
 def openai_response(prompt: str, model_config: Optional[Dict[str, Any]] = None) -> str:
@@ -58,10 +70,10 @@ def openai_response(prompt: str, model_config: Optional[Dict[str, Any]] = None) 
     try:
         from openai import OpenAI
         
-        # Configure API
+        # Get API key from environment
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            return "[Error: OPENAI_API_KEY not found in environment]"
+            return "[Error: OPENAI_API_KEY not found in environment. Set it in .env file]"
         
         client = OpenAI(api_key=api_key)
         
@@ -102,17 +114,17 @@ def anthropic_response(prompt: str, model_config: Optional[Dict[str, Any]] = Non
     try:
         from anthropic import Anthropic
         
-        # Configure API
+        # Get API key from environment
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            return "[Error: ANTHROPIC_API_KEY not found in environment]"
+            return "[Error: ANTHROPIC_API_KEY not found in environment. Set it in .env file]"
         
         client = Anthropic(api_key=api_key)
         
         # Get model configuration
         model_name = model_config.get('model', 'claude-sonnet-4-0') if model_config else 'claude-sonnet-4-0'
         temperature = model_config.get('temperature', 0.7) if model_config else 0.7
-        max_tokens = model_config.get('max_tokens', 64000) if model_config else 64000
+        max_tokens = model_config.get('max_tokens', 8096) if model_config else 8096
         
         # Create message
         message = client.messages.create(
@@ -144,56 +156,87 @@ def mock_response(prompt: str, model_config: Optional[Dict[str, Any]] = None) ->
         Mock response string
     """
     model_name = model_config.get('model', 'mock-model') if model_config else 'mock-model'
-    return f"[Mock response from {model_name}] This is a simulated response to: {prompt[:50]}..."
+    return f"[Mock response from {model_name}] This is a simulated response to: {prompt[:100]}..."
 
 
-def get_llm_function(prompt: str, model_name: str):
+def get_llm_response(prompt: str, model_name: str, model_config: Optional[Dict[str, Any]] = None) -> str:
     """
-    Get the appropriate LLM function based on provider.
+    Get LLM response based on model name.
+    Routes to appropriate provider based on model name.
     
     Args:
-        provider: Provider name (google, openai, anthropic, mock)
+        prompt: The input prompt
+        model_name: Name of the model to use
+        model_config: Optional model configuration
         
     Returns:
-        LLM function
+        Response string from the LLM
     """
-    providers = {
-        'gemini-2.5-flash': gemini_response,
-        'gemini-2.5-pro': gemini_response,
-        'mock': mock_response,
-    }
+    # Default config if none provided
+    if model_config is None:
+        model_config = {
+            "model": model_name,
+            "temperature": 0.7,
+            "max_tokens": 8096
+        }
     
+    # Route based on model name
+    model_lower = model_name.lower()
+    
+    # Gemini models
+    if 'gemini' in model_lower:
+        return gemini_response(prompt, model_config)
+    
+    # OpenAI models
+    elif 'gpt' in model_lower or 'openai' in model_lower:
+        return openai_response(prompt, model_config)
+    
+    # Anthropic models
+    elif 'claude' in model_lower or 'anthropic' in model_lower:
+        return anthropic_response(prompt, model_config)
+    
+    # Mock for testing
+    elif 'mock' in model_lower:
+        return mock_response(prompt, model_config)
+    
+    # Default fallback to Gemini
+    else:
+        print(f"⚠ Unknown model '{model_name}', falling back to Gemini")
+        # Get default configuration from environment variables
+        model_config = {
+            "model": os.getenv('DEFAULT_MODEL', 'gemini-2.5-flash'),
+            "temperature": float(os.getenv('DEFAULT_TEMPERATURE', '0.7')),
+            "max_tokens": int(os.getenv('DEFAULT_MAX_TOKENS', '8096'))
+        }
+        return gemini_response(prompt, model_config)
 
-    response_function = providers[model_name]
-    config = {
-        "model": model_name,
-        "temperature": 0.7,
-        "max_tokens": 2048
-    }    
-    res = response_function(prompt, config)
-    return res
 
-
+# Keep backward compatibility
+def get_llm_function(prompt: str, model_name: str):
+    """
+    Legacy function for backward compatibility.
+    Calls get_llm_response with default config.
+    """
+    return get_llm_response(prompt, model_name)
 
 
 if __name__ == "__main__":
-    # Simple test of Gemini response
-    test_prompt = "What is the capital of France?"
-    response = gemini_response(test_prompt)
-    print(f"Prompt: {test_prompt}\nResponse: {response}")
-
-
-    # import google.generativeai as genai
-    # import os
-
-    # # ⚠️ Use env variable if possible
-    # # genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-    # genai.configure(api_key="AIzaSyC5k8ezxQzUjTzIff1T0gFMWglpLw297P4")
-
-    # print("Listing available models:\n")
-
-    # for model in genai.list_models():
-    #     print("MODEL:", model.name)
-    #     print("  Supported methods:", model.supported_generation_methods)
-    #     print("-" * 50)
-
+    # Test the LLM interface
+    test_prompt = "What is 2+2?"
+    
+    print("Testing LLM Interface...")
+    print("=" * 60)
+    
+    # Test mock (always works)
+    print("\n1. Testing Mock Provider:")
+    response = get_llm_response(test_prompt, "mock")
+    print(response)
+    
+    # Test Gemini (if API key available)
+    print("\n2. Testing Gemini:")
+    response = get_llm_response(test_prompt, "gemini-2.5-flash")
+    print(response[:200] if len(response) > 200 else response)
+    
+    print("\n" + "=" * 60)
+    print("Test complete!")
+    

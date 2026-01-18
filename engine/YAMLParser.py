@@ -31,7 +31,7 @@ class YAMLParser:
         
         # Default values from environment or hardcoded
         self.defaults = {
-            'model': os.getenv('DEFAULT_MODEL', 'gemini'),
+            'model': os.getenv('DEFAULT_MODEL', 'gemini-2.5-flash'),
             'provider': os.getenv('DEFAULT_PROVIDER', 'google'),
             'temperature': float(os.getenv('DEFAULT_TEMPERATURE', '0.7')),
             'max_tokens': int(os.getenv('DEFAULT_MAX_TOKENS', '8096')),
@@ -53,6 +53,41 @@ class YAMLParser:
             raise FileNotFoundError(f"YAML file not found: {self.file_path}")
         except yaml.YAMLError as e:
             raise ValueError(f"Error parsing YAML file: {e}")
+    
+    def validate_config(self, yaml_data: Dict[str, Any]) -> None:
+        """
+        Validate YAML configuration structure.
+        
+        Args:
+            yaml_data: Parsed YAML data
+            
+        Raises:
+            ValueError: If configuration is invalid
+        """
+        # Required top-level fields
+        required = ['agents', 'workflow']
+        for field in required:
+            if field not in yaml_data:
+                raise ValueError(f"Missing required field: {field}")
+        
+        # Validate workflow type
+        workflow_type = yaml_data['workflow'].get('type')
+        if workflow_type not in ['sequential', 'parallel']:
+            raise ValueError(f"workflow.type must be 'sequential' or 'parallel', got: {workflow_type}")
+        
+        # Validate agents list
+        if not isinstance(yaml_data['agents'], (list, dict)):
+            raise ValueError("'agents' must be a list or dictionary")
+        
+        # Validate sequential workflow
+        if workflow_type == 'sequential':
+            if 'steps' not in yaml_data['workflow']:
+                raise ValueError("Sequential workflow must have 'steps' field")
+        
+        # Validate parallel workflow
+        if workflow_type == 'parallel':
+            if 'branches' not in yaml_data['workflow']:
+                raise ValueError("Parallel workflow must have 'branches' field")
     
     def _get_default_model_name(self) -> str:
         """
@@ -209,6 +244,9 @@ class YAMLParser:
         
         if not self.raw_data:
             raise ValueError("No data loaded from YAML file")
+        
+        # Validate the configuration
+        self.validate_config(self.raw_data)
         
         # Initialize the normalized structure
         self.parsed_data = {

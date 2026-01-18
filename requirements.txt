@@ -1,0 +1,8 @@
+# Core MCP dependencies
+mcp>=1.0.0
+anyio>=3.0.0
+
+# Optional: FastMCP for faster server implementation
+fastmcp>=2.0.0
+
+# Add other project dependencies here

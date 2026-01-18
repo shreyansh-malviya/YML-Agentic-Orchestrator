@@ -14,10 +14,6 @@ from memory import store_context, retrieve_context, clear_memory, get_memory_sta
 
 available_models = ["gemini-2.5-flash", "gemini-2.5-pro"]
 
-# Configuration
-input_file = "D:\\D\\Projects\\YML Parser + Agentic Workflow\\engine\\test\\test1.yml"  # User will provide this
-
-
 def load_yaml_data(file_path):
     """Load and parse YAML configuration file"""
     parser = YAMLParser(file_path)
@@ -278,7 +274,7 @@ def execute_parallel_workflow(yaml_data):
 def run_agent(yaml_file):
     """Main function to run agent workflow autonomously"""
     # Clear context for fresh start
-    # clear_context()
+    clear_context()
     
     # Load YAML data
     print(f"🔄 Loading configuration from: {yaml_file}")
@@ -310,4 +306,8 @@ def run_agent(yaml_file):
 
 
 if __name__ == "__main__":
+    
+    # Testing 
+    # Configuration
+    input_file = "D:\\D\\Projects\\YML Parser + Agentic Workflow\\engine\\test\\test1.yml"  # User will provide this
     run_agent(input_file)

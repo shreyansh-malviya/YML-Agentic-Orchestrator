@@ -1,11 +1,16 @@
+# MCP-Enabled Parallel Workflow Configuration
+# This configuration demonstrates parallel agent execution with MCP filesystem tools
+
+# MCP Tools Configuration
+
 agents:
   - id: "coordinator_agent_1"
     role: "Coordinator Agent"
     goal: "Coordinate multiple agents to produce a final high-quality result"
     description: "Manages workflow, delegates tasks, and produces final output"
-    model: default
+    model: gemini-2.5-flash
     tools:
-      - python
+      - filesystem
     instruction: |
       You are the coordinator agent.
       Your responsibilities:
@@ -13,6 +18,7 @@ agents:
       - Delegate work to sub-agents
       - Combine responses
       - Produce final output
+      - Use filesystem tools to save important outputs
     sub_agents:
       - researcher_agent_1
       - analyst_agent_1
@@ -23,33 +29,47 @@ agents:
     goal: "Collect accurate and relevant information"
     model: gemini-2.5-flash
     tools:
-      - deep-research
-      - web_search
+      - filesystem
     instruction: |
       Research the given topic thoroughly and extract key insights.
+      Save your research findings to files for later reference.
 
   - id: "analyst_agent_1"
     role: "Data Analyst"
     goal: "Analyze structured data and derive insights"
     model: gemini-2.5-flash
     tools:
-      - python
+      - filesystem
     instruction: |
       Analyze provided data and summarize trends.
+      Save your analysis results to files.
 
   - id: "writer_agent_1"
     role: "Content Writer"
     goal: "Write a concise and clear explanation"
     model: gemini-2.5-flash
     tools:
-      - text-editor
+      - filesystem
     instruction: |
       Write a final summary based on provided context.
+      Save your written content to files.
+
+  - id: "reviewer_agent_1"
+    role: "Reviewer Agent"
+    goal: "Review and consolidate outputs from parallel agents"
+    model: gemini-2.5-flash
+    mcp_tools:
+      - filesystem
+    instruction: |
+      Review inputs from all branches and produce a consolidated response.
+      Read files created by other agents and create a final consolidated report.
+      Save the final report to a file.
 
 workflow:
-  type: sequential
-  steps:
+  type: parallel
+  branches:
     - coordinator_agent_1
     - researcher_agent_1
     - analyst_agent_1
     - writer_agent_1
+  then: reviewer_agent_1

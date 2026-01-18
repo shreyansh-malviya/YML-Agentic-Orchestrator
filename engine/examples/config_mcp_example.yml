@@ -1,0 +1,52 @@
+# Example MCP Tools Configuration for workflow.yaml
+# This demonstrates how to configure MCP servers in your YAML workflow
+
+# MCP Tools Configuration
+mcp_tools:
+  # Filesystem MCP Server
+  filesystem:
+    server: "python" # Will be replaced with sys.executable
+    args:
+      - "mcp_filesystem_server.py"
+    env: {}
+
+  # Example: Another MCP server (commented out)
+  # custom_tools:
+  #   server: "node"
+  #   args:
+  #     - "path/to/custom_server.js"
+  #   env:
+  #     API_KEY: "your-api-key"
+
+# Agents using MCP tools
+agents:
+  - id: "file_manager_agent"
+    role: "File Manager"
+    goal: "Manage files and directories using MCP tools"
+    description: "Uses MCP filesystem tools to create, read, and modify files"
+    model: default
+    mcp_tools:
+      - filesystem
+    instruction: |
+      You are a file manager agent with access to filesystem operations.
+      Use the available MCP tools to manage files and directories.
+      Always confirm success of operations.
+
+  - id: "workflow_agent"
+    role: "Workflow Coordinator"
+    goal: "Coordinate file operations workflow"
+    description: "Manages the workflow of file operations"
+    model: gemini-2.5-flash
+    tools:
+      - python
+    mcp_tools:
+      - filesystem
+    instruction: |
+      Coordinate file operations using MCP tools.
+      Ensure all operations complete successfully.
+
+workflow:
+  type: sequential
+  steps:
+    - file_manager_agent
+    - workflow_agent

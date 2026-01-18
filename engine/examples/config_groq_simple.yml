@@ -1,0 +1,81 @@
+# Simple Groq Workflow with Validation
+# Creates calculator code and validates it works
+
+# MCP Tools Configuration
+tools:
+  filesystem:
+    server: "python"
+    args:
+      - "simple_mcp_server.py"
+    env: {}
+
+agents:
+  - id: "code_writer"
+    role: "Python Code Writer"
+    goal: "Write a simple calculator Python script"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+    instruction: |
+      Write a simple Python calculator script with add, subtract, multiply, and divide functions.
+
+      IMPORTANT: At the end of your response, include a section like this:
+
+      [TOOL_CALLS]
+      filesystem.create_file("calculator.py", "<full_code_here>")
+      [/TOOL_CALLS]
+
+      Replace <full_code_here> with the actual Python code you want to save.
+      Use proper Python string escaping for quotes.
+
+  - id: "code_tester"
+    role: "Code Tester"
+    goal: "Read and describe the calculator code"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+    instruction: |
+      Read the calculator.py file and verify it's correct.
+
+      To read the file, include at the end:
+
+      [TOOL_CALLS]
+      filesystem.read_file("calculator.py")
+      [/TOOL_CALLS]
+
+      Then describe what you found.
+
+  - id: "code_validator"
+    role: "Python Code Validator"
+    goal: "Validate the calculator code by running tests"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+    instruction: |
+      Test the calculator functions by executing Python code.
+      
+      Write Python code that imports and tests the calculator functions.
+      Test each function: add, subtract, multiply, divide.
+      Check division by zero handling.
+      Print test results.
+      
+      Use the execute_python tool to run your tests directly.
+
+      Example:
+      [TOOL_CALLS]
+      filesystem.execute_python("print('Test')")
+      [/TOOL_CALLS]
+
+workflow:
+  type: sequential
+  steps:
+    - code_writer
+    - code_tester
+    - code_validator
+
+models:
+  llama-3.1-8b-instant:
+    provider: groq
+    model: llama-3.1-8b-instant
+    temperature: 0.3
+    max_tokens: 4096

@@ -1,0 +1,86 @@
+# Web Scraper Workflow
+# Creates a Python web scraper and tests it
+
+# MCP Tools Configuration
+tools:
+  filesystem:
+    server: "python"
+    args:
+      - "simple_mcp_server.py"
+    env: {}
+
+agents:
+  - id: "scraper_developer"
+    role: "Python Web Scraper Developer"
+    goal: "Create a web scraper that extracts article titles from a webpage"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+    instruction: |
+      Write a Python web scraper script that:
+      1. Uses requests and BeautifulSoup4 libraries
+      2. Scrapes article titles from a news website (use https://news.ycombinator.com as example)
+      3. Saves results to a JSON file
+      4. Includes error handling and user-agent headers
+      
+      Name the file "web_scraper.py"
+
+      IMPORTANT: At the end of your response, include:
+
+      [TOOL_CALLS]
+      filesystem.create_file("web_scraper.py", """<your_complete_python_code_here>""")
+      [/TOOL_CALLS]
+
+      Use triple quotes for multi-line code.
+
+  - id: "requirements_writer"
+    role: "Requirements File Creator"
+    goal: "Create requirements.txt for the web scraper"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+    instruction: |
+      Create a requirements.txt file with the necessary dependencies for the web scraper:
+      - requests
+      - beautifulsoup4
+      - Any other libraries needed
+
+      [TOOL_CALLS]
+      filesystem.create_file("requirements.txt", """<dependencies_here>""")
+      [/TOOL_CALLS]
+
+  - id: "code_reviewer"
+    role: "Code Reviewer"
+    goal: "Review the web scraper code and requirements"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+    instruction: |
+      Read both the web_scraper.py and requirements.txt files and provide a code review.
+      
+      Check for:
+      - Proper error handling
+      - Code quality
+      - Security considerations
+      - Whether requirements match the code
+
+      [TOOL_CALLS]
+      filesystem.read_file("web_scraper.py")
+      filesystem.read_file("requirements.txt")
+      [/TOOL_CALLS]
+
+      Then provide your review.
+
+workflow:
+  type: sequential
+  steps:
+    - scraper_developer
+    - requirements_writer
+    - code_reviewer
+
+models:
+  llama-3.1-8b-instant:
+    provider: groq
+    model: llama-3.1-8b-instant
+    temperature: 0.3
+    max_tokens: 4096

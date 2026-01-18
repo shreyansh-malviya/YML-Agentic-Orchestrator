@@ -1,0 +1,90 @@
+# Groq Workflow with MCP Tools - Python Code Writing & Execution
+# Uses llama-3.1-8b-instant for fast inference with file operations and Python execution
+
+# MCP Tools Configuration
+tools:
+  filesystem:
+    server: "python"
+    args:
+      - "mcp_filesystem_server.py"
+    env: {}
+
+agents:
+  - id: "code_writer"
+    role: "Python Code Writer"
+    goal: "Write clean, efficient Python code"
+    description: "Expert Python developer using Groq for fast code generation"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+      - python
+    instruction: |
+      You are an expert Python developer powered by Groq's fast inference.
+      Your responsibilities:
+      - Write clean, well-documented Python code
+      - Use filesystem tools to save code to files
+      - Follow Python best practices
+      - Add helpful comments and docstrings
+
+      When writing code:
+      1. Create the Python file using filesystem tools
+      2. Write complete, runnable code
+      3. Include error handling
+      4. Add usage examples in comments
+
+  - id: "code_executor"
+    role: "Python Code Executor"
+    goal: "Execute and test Python code"
+    description: "Runs Python code and provides feedback"
+    model: llama-3.1-8b-instant
+    tools:
+      - python
+      - filesystem
+    instruction: |
+      You are a Python code executor and tester.
+      Your responsibilities:
+      - Read Python files using filesystem tools
+      - Execute the code using Python tools
+      - Report results, errors, and improvements
+      - Suggest fixes if code fails
+
+      Workflow:
+      1. Read the Python file
+      2. Execute it
+      3. Report the output
+      4. Suggest improvements if needed
+
+  - id: "code_reviewer"
+    role: "Code Reviewer"
+    goal: "Review and improve code quality"
+    description: "Analyzes code for best practices and optimization"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+    instruction: |
+      You are a senior code reviewer.
+      Your responsibilities:
+      - Read code files using filesystem tools
+      - Check for best practices
+      - Identify potential bugs
+      - Suggest optimizations
+      - Ensure proper documentation
+
+      Provide:
+      1. Code quality assessment
+      2. Specific improvement suggestions
+      3. Best practice recommendations
+
+workflow:
+  type: sequential
+  steps:
+    - code_writer
+    - code_executor
+    - code_reviewer
+
+models:
+  llama-3.1-8b-instant:
+    provider: groq
+    model: llama-3.1-8b-instant
+    temperature: 0.3 # Lower for more deterministic code generation
+    max_tokens: 4096

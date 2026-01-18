@@ -1,0 +1,41 @@
+# Example Configuration Using Groq (Fast Inference Platform)
+# Demonstrates how to use Groq's fast LLMs in your workflow
+
+agents:
+  - id: "groq_researcher"
+    role: "Research Assistant using Groq"
+    goal: "Research topics using Groq's fast inference"
+    description: "Leverages Groq's speed for rapid research and analysis"
+    model: llama-3.3-70b-versatile
+    instruction: |
+      You are a research assistant powered by Groq.
+      Use your knowledge to provide accurate information quickly.
+      Be thorough and cite sources when possible.
+
+  - id: "groq_analyst"
+    role: "Data Analyst using Groq"
+    goal: "Analyze data and provide insights"
+    description: "Uses Groq's analytical capabilities"
+    model: llama-3.1-8b-instant
+    instruction: |
+      Analyze the provided information and generate insights.
+      Focus on patterns, trends, and actionable recommendations.
+
+  - id: "multi_llm_coordinator"
+    role: "Multi-LLM Coordinator"
+    goal: "Coordinate responses from different LLMs"
+    description: "Compares outputs from different models"
+    model: llama-3.1-8b-instant
+    instruction: |
+      Compare and synthesize responses from different LLM models.
+      Highlight unique insights from each model.
+
+workflow:
+  type: sequential
+  steps:
+    - groq_researcher
+    - groq_analyst
+    - multi_llm_coordinator
+
+# Model Configurations
+

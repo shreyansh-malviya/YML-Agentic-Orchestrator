@@ -1,0 +1,218 @@
+# Comprehensive Multi-Tool Integration Workflow
+# Tests GitHub, Calculator, and Filesystem MCP servers with a real-world scenario
+# Scenario: Analyze popular Python repos, calculate statistics, generate visualization code
+
+# MCP Tools Configuration
+tools:
+  github:
+    server: "python"
+    args:
+      - "simple_github_mcp_server.py"
+    env: {}
+  
+  calculator:
+    server: "python"
+    args:
+      - "simple_calculator_mcp_server.py"
+    env: {}
+  
+  filesystem:
+    server: "python"
+    args:
+      - "simple_mcp_server.py"
+    env: {}
+
+agents:
+  - id: "github_researcher"
+    role: "GitHub Repository Researcher"
+    goal: "Find and analyze top Python data science repositories"
+    model: llama-3.1-8b-instant
+    tools:
+      - github
+    instruction: |
+      Research popular Python data science repositories on GitHub.
+      
+      Search for the top 5 repositories and list files in one of them.
+      
+      Step 1: Search for Python data science repos
+      [TOOL_CALLS]
+      github.search_repositories("python data science", 5)
+      [/TOOL_CALLS]
+      
+      Step 2: Explore the structure of the first repository (pandas)
+      [TOOL_CALLS]
+      github.list_repository_files("pandas-dev", "pandas", "pandas")
+      [/TOOL_CALLS]
+      
+      Step 3: Read an important file to understand the project
+      [TOOL_CALLS]
+      github.read_file_content("pandas-dev", "pandas", "README.md")
+      [/TOOL_CALLS]
+
+  - id: "data_analyst"
+    role: "Statistical Data Analyst"
+    goal: "Calculate statistics from GitHub repository data"
+    model: llama-3.1-8b-instant
+    tools:
+      - calculator
+      - filesystem
+    instruction: |
+      Based on the GitHub data from previous step, perform statistical analysis.
+      
+      Let's analyze star counts. Assume we found these repos with stars:
+      - pandas: 45000 stars
+      - numpy: 28000 stars  
+      - scikit-learn: 61000 stars
+      - matplotlib: 20000 stars
+      - scipy: 13000 stars
+      
+      Calculate:
+      1. Average stars across all repos
+      2. Total stars
+      3. What percentage of total stars does pandas have?
+      
+      [TOOL_CALLS]
+      calculator.average([45000, 28000, 61000, 20000, 13000])
+      calculator.add(45000, 28000)
+      calculator.add(73000, 61000)
+      calculator.add(134000, 20000)
+      calculator.add(154000, 13000)
+      calculator.percentage(167000, 26.95)
+      [/TOOL_CALLS]
+      
+      Then save these statistics to a file:
+      
+      [TOOL_CALLS]
+      filesystem.create_file("repo_statistics.txt", "<statistics_summary>")
+      [/TOOL_CALLS]
+
+  - id: "python_code_generator"
+    role: "Python Code Generator"
+    goal: "Generate Python code for data visualization"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+      - calculator
+    instruction: |
+      Create a Python script that demonstrates mathematical calculations.
+      
+      The script should:
+      1. Calculate Fibonacci sequence up to 10 numbers
+      2. Calculate factorial of 5
+      3. Demonstrate the Pythagorean theorem (3, 4, 5 triangle)
+      
+      First, calculate some values to include:
+      [TOOL_CALLS]
+      calculator.power(3, 2)
+      calculator.power(4, 2)
+      calculator.add(9, 16)
+      calculator.sqrt(25)
+      [/TOOL_CALLS]
+      
+      Then create the Python script:
+      
+      [TOOL_CALLS]
+      filesystem.create_file("math_demo.py", "<your_python_code>")
+      [/TOOL_CALLS]
+
+  - id: "code_executor"
+    role: "Python Code Executor"
+    goal: "Execute generated Python code and verify output"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+    instruction: |
+      Read the generated Python script and execute it to verify it works.
+      
+      Step 1: Read the generated code
+      [TOOL_CALLS]
+      filesystem.read_file("math_demo.py")
+      [/TOOL_CALLS]
+      
+      Step 2: Execute demonstration Python code
+      [TOOL_CALLS]
+      filesystem.execute_python("print('Math Test'); print('Fibonacci 10th:', 55); print('Factorial 5:', 120); print('Pythagorean 3-4-5:', 5.0)")
+      [/TOOL_CALLS]
+      
+      Verify the code executes without errors.
+
+  - id: "workspace_manager"
+    role: "Workspace File Manager"
+    goal: "Organize and verify all generated files"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+      - calculator
+    instruction: |
+      Create a comprehensive workspace report.
+      
+      Step 1: List all files in the workspace
+      [TOOL_CALLS]
+      filesystem.list_directory(".")
+      [/TOOL_CALLS]
+      
+      Step 2: Create a new directory for organization
+      [TOOL_CALLS]
+      filesystem.create_directory("analysis_results")
+      [/TOOL_CALLS]
+      
+      Step 3: Read the statistics file to include in summary
+      [TOOL_CALLS]
+      filesystem.read_file("repo_statistics.txt")
+      [/TOOL_CALLS]
+      
+      Step 4: Calculate some final metrics
+      [TOOL_CALLS]
+      calculator.divide(167000, 5)
+      calculator.multiply(33400, 2)
+      [/TOOL_CALLS]
+
+  - id: "final_reporter"
+    role: "Final Report Generator"
+    goal: "Create comprehensive final report of all operations"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+      - calculator
+    instruction: |
+      Generate a final comprehensive report summarizing all activities.
+      
+      Calculate project completion percentage and effort metrics:
+      
+      [TOOL_CALLS]
+      calculator.percentage(100, 100)
+      calculator.average([95, 98, 100, 97, 99])
+      calculator.power(2, 5)
+      calculator.sqrt(1024)
+      [/TOOL_CALLS]
+      
+      Create the final report:
+      
+      [TOOL_CALLS]
+      filesystem.create_file("FINAL_REPORT.md", "<comprehensive_markdown_report>")
+      [/TOOL_CALLS]
+      
+      Include in the report:
+      - Summary of GitHub repositories analyzed
+      - Statistical calculations performed
+      - Python code generated and executed
+      - Files created and organized
+      - Success metrics
+      - Tools utilized (GitHub, Calculator, Filesystem)
+
+workflow:
+  type: sequential
+  steps:
+    - github_researcher
+    - data_analyst
+    - python_code_generator
+    - code_executor
+    - workspace_manager
+    - final_reporter
+
+models:
+  llama-3.1-8b-instant:
+    provider: groq
+    model: llama-3.1-8b-instant
+    temperature: 0.3
+    max_tokens: 4096

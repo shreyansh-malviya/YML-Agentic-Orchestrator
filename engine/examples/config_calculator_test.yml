@@ -1,0 +1,140 @@
+# Calculator Testing Workflow
+# Tests all calculator MCP server operations
+
+# MCP Tools Configuration
+tools:
+  calculator:
+    server: "python"
+    args:
+      - "simple_calculator_mcp_server.py"
+    env: {}
+  
+  filesystem:
+    server: "python"
+    args:
+      - "simple_mcp_server.py"
+    env: {}
+
+agents:
+  - id: "basic_math_tester"
+    role: "Basic Math Tester"
+    goal: "Test basic arithmetic operations"
+    model: llama-3.1-8b-instant
+    tools:
+      - calculator
+    instruction: |
+      Test all basic calculator operations: add, subtract, multiply, divide.
+      
+      Perform these calculations:
+      1. Add 150 and 75
+      2. Subtract 200 from 500
+      3. Multiply 25 by 8
+      4. Divide 144 by 12
+      
+      Use the calculator tools:
+      
+      [TOOL_CALLS]
+      calculator.add(150, 75)
+      calculator.subtract(500, 200)
+      calculator.multiply(25, 8)
+      calculator.divide(144, 12)
+      [/TOOL_CALLS]
+      
+      Report the results of each operation.
+
+  - id: "advanced_math_tester"
+    role: "Advanced Math Tester"
+    goal: "Test advanced mathematical functions"
+    model: llama-3.1-8b-instant
+    tools:
+      - calculator
+    instruction: |
+      Test advanced calculator operations: power, square root, percentage, and average.
+      
+      Perform these calculations:
+      1. Calculate 2 to the power of 8
+      2. Find the square root of 256
+      3. Calculate 25% of 800
+      4. Find the average of these numbers: 85, 92, 78, 95, 88
+      
+      Use the calculator tools:
+      
+      [TOOL_CALLS]
+      calculator.power(2, 8)
+      calculator.sqrt(256)
+      calculator.percentage(800, 25)
+      calculator.average([85, 92, 78, 95, 88])
+      [/TOOL_CALLS]
+      
+      Explain what each result means.
+
+  - id: "error_handler_tester"
+    role: "Error Handler Tester"
+    goal: "Test error handling in calculator"
+    model: llama-3.1-8b-instant
+    tools:
+      - calculator
+    instruction: |
+      Test error handling by trying operations that should fail:
+      
+      1. Try dividing 100 by 0 (should get error)
+      2. Try square root of -25 (should get error)
+      
+      Use the calculator tools:
+      
+      [TOOL_CALLS]
+      calculator.divide(100, 0)
+      calculator.sqrt(-25)
+      [/TOOL_CALLS]
+      
+      Verify that appropriate error messages are returned.
+
+  - id: "report_generator"
+    role: "Test Report Generator"
+    goal: "Create a comprehensive test report"
+    model: llama-3.1-8b-instant
+    tools:
+      - calculator
+      - filesystem
+    instruction: |
+      Create a comprehensive test report based on all the tests performed.
+      
+      First, do a final calculation - add up some test scores:
+      Calculate: 85 + 92 + 78 + 95 + 88
+      
+      [TOOL_CALLS]
+      calculator.add(85, 92)
+      calculator.add(177, 78)
+      calculator.add(255, 95)
+      calculator.add(350, 88)
+      [/TOOL_CALLS]
+      
+      Then create a report file summarizing all calculator tests.
+      
+      Example format for the report file:
+      
+      [TOOL_CALLS]
+      filesystem.create_file("calculator_test_report.txt", "<your_report_content_here>")
+      [/TOOL_CALLS]
+      
+      Include in the report:
+      - Test date and status
+      - Basic operations results
+      - Advanced operations results  
+      - Error handling verification
+      - Conclusion
+
+workflow:
+  type: sequential
+  steps:
+    - basic_math_tester
+    - advanced_math_tester
+    - error_handler_tester
+    - report_generator
+
+models:
+  llama-3.1-8b-instant:
+    provider: groq
+    model: llama-3.1-8b-instant
+    temperature: 0.3
+    max_tokens: 4096

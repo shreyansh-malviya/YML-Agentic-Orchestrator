@@ -1,0 +1,76 @@
+# Multi-Tool Workflow Demo
+# Uses GitHub, Calculator, and Filesystem MCP servers
+
+# MCP Tools Configuration
+tools:
+  github:
+    server: "python"
+    args:
+      - "simple_github_mcp_server.py"
+    env: {}
+  
+  calculator:
+    server: "python"
+    args:
+      - "simple_calculator_mcp_server.py"
+    env: {}
+  
+  filesystem:
+    server: "python"
+    args:
+      - "simple_mcp_server.py"
+    env: {}
+
+agents:
+  - id: "data_analyst"
+    role: "Data Analyst"
+    goal: "Search GitHub and calculate statistics"
+    model: llama-3.1-8b-instant
+    tools:
+      - github
+      - calculator
+    instruction: |
+      Find the top 3 Python machine learning repositories on GitHub.
+      Then calculate the average number of stars across these repositories.
+      
+      First search:
+      [TOOL_CALLS]
+      github.search_repositories("python machine learning", 3)
+      [/TOOL_CALLS]
+      
+      Then use calculator to find average stars.
+      Example: calculator.average([10000, 20000, 30000])
+
+  - id: "report_writer"
+    role: "Report Writer"
+    goal: "Create a summary report file"
+    model: llama-3.1-8b-instant
+    tools:
+      - filesystem
+      - calculator
+    instruction: |
+      Create a report file summarizing the analysis from the previous step.
+      
+      Include:
+      - Repository names and star counts
+      - Average stars calculated
+      - Total stars (use calculator.add if needed)
+      
+      Save to a file called "github_analysis_report.txt"
+      
+      [TOOL_CALLS]
+      filesystem.create_file("github_analysis_report.txt", "<your_report_content>")
+      [/TOOL_CALLS]
+
+workflow:
+  type: sequential
+  steps:
+    - data_analyst
+    - report_writer
+
+models:
+  llama-3.1-8b-instant:
+    provider: groq
+    model: llama-3.1-8b-instant
+    temperature: 0.3
+    max_tokens: 4096

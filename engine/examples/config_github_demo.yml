@@ -1,0 +1,74 @@
+# GitHub Repository Analyzer Workflow
+# Searches for repos, lists files, and reads content
+
+# MCP Tools Configuration
+tools:
+  github:
+    server: "python"
+    args:
+      - "simple_github_mcp_server.py"
+    env: {}
+
+agents:
+  - id: "repo_finder"
+    role: "GitHub Repository Finder"
+    goal: "Search for interesting Python projects"
+    model: llama-3.1-8b-instant
+    tools:
+      - github
+    instruction: |
+      Search for popular Python web framework repositories on GitHub.
+      Find the top 5 most starred repositories.
+      
+      Use the search_repositories tool like this:
+      
+      [TOOL_CALLS]
+      github.search_repositories("python web framework", 5)
+      [/TOOL_CALLS]
+
+  - id: "file_explorer"
+    role: "Repository File Explorer"
+    goal: "List files in the fastapi repository"
+    model: llama-3.1-8b-instant
+    tools:
+      - github
+    instruction: |
+      Explore the FastAPI repository structure.
+      List the files in the root directory of fastapi/fastapi repository.
+      
+      Use the list_repository_files tool:
+      
+      [TOOL_CALLS]
+      github.list_repository_files("fastapi", "fastapi", "")
+      [/TOOL_CALLS]
+
+  - id: "code_reader"
+    role: "Code Reader"
+    goal: "Read the README from FastAPI repository"
+    model: llama-3.1-8b-instant
+    tools:
+      - github
+    instruction: |
+      Read the README.md file from the FastAPI repository to understand the project.
+      
+      Use the read_file_content tool:
+      
+      [TOOL_CALLS]
+      github.read_file_content("fastapi", "fastapi", "README.md")
+      [/TOOL_CALLS]
+      
+      Then summarize what you learned about FastAPI.
+
+workflow:
+  type: sequential
+  steps:
+    - repo_finder
+    - file_explorer
+    - code_reader
+
+models:
+  llama-3.1-8b-instant:
+    provider: groq
+    model: llama-3.1-8b-instant
+    temperature: 0.3
+    max_tokens: 4096

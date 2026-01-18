@@ -106,7 +106,7 @@ def store_context(role: str, text: str):
     with open(MEMORY_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(memory_entry, ensure_ascii=False) + "\n")
     
-    print(f"💾 Stored memory: {role} ({len(text)} chars)")
+    print(f"=> Stored memory: {role} ({len(text)} chars)")
 
 
 def retrieve_context(query: str, k: int = 5) -> str:

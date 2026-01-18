@@ -3,9 +3,24 @@ Example MCP Filesystem Server using FastMCP
 Provides file and directory operations for AI agents
 """
 
+import sys
+import os
+
+# Fix Windows asyncio/socket issue BEFORE any imports
+if sys.platform == 'win32':
+    # Set Windows specific environment variable to avoid Winsock issues
+    import socket
+    # Force use of selector event loop instead of proactor
+    os.environ.setdefault('PYTHONASYNCIODEBUG', '0')
+
+import asyncio
+
+# Set event loop policy for Windows
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from fastmcp import FastMCP
 from pathlib import Path
-import os
 
 # Create FastMCP server instance
 server = FastMCP("Filesystem Tools")
@@ -152,6 +167,57 @@ def delete_file(filepath: str) -> str:
         return f"✓ File deleted successfully: {filepath}"
     except Exception as e:
         return f"✗ Error deleting file: {str(e)}"
+
+
+@server.tool()
+def execute_python(code: str) -> str:
+    """
+    Execute Python code and return the output
+    
+    Args:
+        code: Python code to execute
+    
+    Returns:
+        Output from the code execution (stdout, stderr, or return value)
+    """
+    import io
+    import sys
+    import traceback
+    from contextlib import redirect_stdout, redirect_stderr
+    
+    try:
+        # Capture stdout and stderr
+        stdout_capture = io.StringIO()
+        stderr_capture = io.StringIO()
+        
+        # Create a namespace for execution
+        namespace = {}
+        
+        with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
+            try:
+                # Try to compile and execute
+                compiled_code = compile(code, '<string>', 'exec')
+                exec(compiled_code, namespace)
+            except Exception as e:
+                # Capture execution errors
+                traceback.print_exc()
+        
+        # Get output
+        stdout_value = stdout_capture.getvalue()
+        stderr_value = stderr_capture.getvalue()
+        
+        # Build result
+        result = ""
+        if stdout_value:
+            result += f"[STDOUT]\n{stdout_value}\n"
+        if stderr_value:
+            result += f"[STDERR]\n{stderr_value}\n"
+        if not stdout_value and not stderr_value:
+            result = "✓ Code executed successfully (no output)"
+        
+        return result.strip()
+    except Exception as e:
+        return f"✗ Error executing code: {str(e)}\n{traceback.format_exc()}"
 
 
 if __name__ == "__main__":

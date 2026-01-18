@@ -5,8 +5,12 @@ Processes YAML configuration files to execute AI agent workflows.
 
 import argparse
 import sys
+import warnings
 from pathlib import Path
 from engine.Agent import run_agent
+
+# Suppress Windows pipe cleanup warnings
+warnings.filterwarnings("ignore", category=ResourceWarning, message=".*unclosed.*")
 
 
 def main():

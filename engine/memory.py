@@ -25,18 +25,25 @@ except ImportError:
     print("⚠ faiss-cpu not installed. Run: pip install faiss-cpu")
 
 
-# Configuration
+# Configuration - Use relative path from this file
 MEMORY_DIR = Path(__file__).parent / "context"
 EMBED_FILE = MEMORY_DIR / "embeddings.npy"
 MEMORY_FILE = MEMORY_DIR / "memory.jsonl"
 MODEL_NAME = "all-MiniLM-L6-v2"
 DIM = 384  # Dimension for all-MiniLM-L6-v2
 
-# Initialize model
-if SENTENCE_TRANSFORMERS_AVAILABLE:
-    MODEL = SentenceTransformer(MODEL_NAME)
-else:
-    MODEL = None
+# Initialize model (lazy loading)
+MODEL = None
+
+
+def get_model():
+    """Lazy load the sentence transformer model"""
+    global MODEL
+    if MODEL is None and SENTENCE_TRANSFORMERS_AVAILABLE:
+        print("Loading sentence transformer model...")
+        MODEL = SentenceTransformer(MODEL_NAME)
+        print(f"✓ Model loaded: {MODEL_NAME}")
+    return MODEL
 
 
 def ensure_memory_dir():
@@ -80,13 +87,20 @@ def store_context(role: str, text: str):
         text: Response text to store
     """
     if not SENTENCE_TRANSFORMERS_AVAILABLE or not FAISS_AVAILABLE:
-        print("⚠ RAG dependencies not available. Skipping memory storage.")
+        # Fallback to simple storage
+        _fallback_store(role, text)
         return
     
     ensure_memory_dir()
     
+    # Get model
+    model = get_model()
+    if model is None:
+        _fallback_store(role, text)
+        return
+    
     # Generate embedding
-    embedding = MODEL.encode([text], convert_to_numpy=True)
+    embedding = model.encode([text], convert_to_numpy=True)
     
     # Save embedding
     if EMBED_FILE.exists():
@@ -106,7 +120,7 @@ def store_context(role: str, text: str):
     with open(MEMORY_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(memory_entry, ensure_ascii=False) + "\n")
     
-    print(f"=> Stored memory: {role} ({len(text)} chars)")
+    print(f"💾 Stored memory: {role} ({len(text)} chars)")
 
 
 def retrieve_context(query: str, k: int = 5) -> str:
@@ -121,11 +135,16 @@ def retrieve_context(query: str, k: int = 5) -> str:
         Formatted context string with relevant previous conversations
     """
     if not SENTENCE_TRANSFORMERS_AVAILABLE or not FAISS_AVAILABLE:
-        print("⚠ RAG dependencies not available. Returning empty context.")
-        return ""
+        # Fallback to simple retrieval
+        return _fallback_retrieve(query, k)
     
     if not EMBED_FILE.exists() or not MEMORY_FILE.exists():
         return ""
+    
+    # Get model
+    model = get_model()
+    if model is None:
+        return _fallback_retrieve(query, k)
     
     # Load vectors and create index
     vectors = np.load(EMBED_FILE)
@@ -135,7 +154,7 @@ def retrieve_context(query: str, k: int = 5) -> str:
         return ""
     
     # Generate query embedding
-    query_embedding = MODEL.encode([query], convert_to_numpy=True).astype('float32')
+    query_embedding = model.encode([query], convert_to_numpy=True).astype('float32')
     
     # Search for k most similar
     k = min(k, index.ntotal)  # Don't search for more than available
@@ -172,7 +191,8 @@ def get_memory_stats() -> Dict:
     stats = {
         "total_memories": 0,
         "embedding_dimension": DIM,
-        "storage_path": str(MEMORY_DIR)
+        "storage_path": str(MEMORY_DIR),
+        "rag_available": SENTENCE_TRANSFORMERS_AVAILABLE and FAISS_AVAILABLE
     }
     
     if MEMORY_FILE.exists():
@@ -191,6 +211,8 @@ def _fallback_store(role: str, text: str):
     with open(fallback_file, "a", encoding="utf-8") as f:
         json.dump({"role": role, "text": text}, f, ensure_ascii=False)
         f.write("\n")
+    
+    print(f"💾 [Fallback] Stored: {role} ({len(text)} chars)")
 
 
 def _fallback_retrieve(query: str, k: int = 5) -> str:
@@ -211,4 +233,5 @@ def _fallback_retrieve(query: str, k: int = 5) -> str:
         memory = json.loads(line)
         context_parts.append(f"{memory['role']}: {memory['text']}")
     
+    print(f"🔍 [Fallback] Retrieved {len(context_parts)} memories")
     return "\n\n".join(context_parts)

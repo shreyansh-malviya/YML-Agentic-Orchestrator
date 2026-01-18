@@ -248,12 +248,37 @@ class YAMLParser:
         # Validate the configuration
         self.validate_config(self.raw_data)
         
-        # Initialize the normalized structure
+        # Initialize the normalized structure with basic fields
         self.parsed_data = {
             'agents': [],
             'workflow': {},
             'models': {}
         }
+        
+        # Add default MCP tools configuration if not present
+        if 'tools' not in self.raw_data:
+            self.parsed_data['tools'] = {
+                'github': {
+                    'server': 'python',
+                    'args': ['simple_github_mcp_server.py'],
+                    'env': {}
+                },
+                'calculator': {
+                    'server': 'python',
+                    'args': ['simple_calculator_mcp_server.py'],
+                    'env': {}
+                },
+                'filesystem': {
+                    'server': 'python',
+                    'args': ['simple_mcp_server.py'],
+                    'env': {}
+                }
+            }
+        
+        # Copy any other top-level fields (like 'tools' or 'mcp_tools')
+        for key, value in self.raw_data.items():
+            if key not in ['agents', 'workflow', 'models']:
+                self.parsed_data[key] = value
         
         # Parse agents
         agents_data = self.raw_data.get('agents', [])

@@ -1,52 +1,93 @@
-# Example MCP Tools Configuration for workflow.yaml
-# This demonstrates how to configure MCP servers in your YAML workflow
+# Example MCP Tools Configuration
+# This demonstrates how to use MCP tools in your YAML workflow
+# NOTE: The 'tools' section is now OPTIONAL - all MCP servers load automatically by default
 
-# MCP Tools Configuration
-mcp_tools:
-  # Filesystem MCP Server
-  filesystem:
-    server: "python" # Will be replaced with sys.executable
-    args:
-      - "mcp_filesystem_server.py"
-    env: {}
+# Optional: Custom Tools Configuration
+# You can override default tools or add custom MCP servers
+# tools:
+#   filesystem:
+#     server: "python"
+#     args: ["simple_mcp_server.py"]
+#     env: {}
+#   github:
+#     server: "python"
+#     args: ["simple_github_mcp_server.py"]
+#     env: {}
+#   calculator:
+#     server: "python"
+#     args: ["simple_calculator_mcp_server.py"]
+#     env: {}
+#   custom_tool:
+#     server: "node"
+#     args: ["path/to/custom_server.js"]
+#     env:
+#       API_KEY: "your-api-key"
 
-  # Example: Another MCP server (commented out)
-  # custom_tools:
-  #   server: "node"
-  #   args:
-  #     - "path/to/custom_server.js"
-  #   env:
-  #     API_KEY: "your-api-key"
-
-# Agents using MCP tools
+# Agents Configuration
 agents:
-  - id: "file_manager_agent"
-    role: "File Manager"
-    goal: "Manage files and directories using MCP tools"
-    description: "Uses MCP filesystem tools to create, read, and modify files"
-    model: default
-    mcp_tools:
-      - filesystem
-    instruction: |
-      You are a file manager agent with access to filesystem operations.
-      Use the available MCP tools to manage files and directories.
-      Always confirm success of operations.
+  - id: file_creator
+    name: "File Manager Agent"
+    role: "Creates and manages files using MCP filesystem tools"
+    model: "groq:llama-3.1-8b-instant"
+    max_tokens: 1000
+    temperature: 0.7
 
-  - id: "workflow_agent"
-    role: "Workflow Coordinator"
-    goal: "Coordinate file operations workflow"
-    description: "Manages the workflow of file operations"
-    model: gemini-2.5-flash
-    tools:
-      - python
-    mcp_tools:
-      - filesystem
-    instruction: |
-      Coordinate file operations using MCP tools.
-      Ensure all operations complete successfully.
+  - id: math_worker
+    name: "Calculator Agent"
+    role: "Performs mathematical calculations using MCP calculator tools"
+    model: "groq:llama-3.1-8b-instant"
+    max_tokens: 800
+    temperature: 0.5
 
+  - id: github_searcher
+    name: "GitHub Research Agent"
+    role: "Searches GitHub repositories using MCP github tools"
+    model: "groq:llama-3.1-8b-instant"
+    max_tokens: 1200
+    temperature: 0.6
+
+  - id: report_generator
+    name: "Report Generator"
+    role: "Compiles results into a comprehensive report"
+    model: "groq:llama-3.1-8b-instant"
+    max_tokens: 1500
+    temperature: 0.7
+
+# Workflow Definition
 workflow:
-  type: sequential
+  mode: sequential
   steps:
-    - file_manager_agent
-    - workflow_agent
+    - agent: file_creator
+      task: |
+        Create a file called 'mcp_demo.txt' in the workspace directory with the following content:
+        "This file was created using MCP filesystem tools.
+        
+        MCP (Model Context Protocol) enables AI agents to interact with external tools.
+        Available tools: filesystem, github, calculator"
+    
+    - agent: math_worker
+      task: |
+        Using the calculator tools, perform the following calculations and save results:
+        1. Add 150 and 275
+        2. Calculate 25% of 1000
+        3. Find the average of [45, 78, 92, 63, 88]
+        4. Calculate 2 to the power of 10
+        
+        Create a file called 'calculations.txt' with all the results.
+    
+    - agent: github_searcher
+      task: |
+        Search GitHub for repositories related to "Model Context Protocol".
+        Find the top 3 repositories by stars.
+        Save the repository names and star counts to 'github_results.txt'.
+    
+    - agent: report_generator
+      task: |
+        Read all three files created by previous agents:
+        - mcp_demo.txt
+        - calculations.txt  
+        - github_results.txt
+        
+        Compile them into a comprehensive markdown report called 'mcp_workflow_report.md'
+        with sections for each type of operation (filesystem, calculations, github).
+        Include a summary of what was accomplished.

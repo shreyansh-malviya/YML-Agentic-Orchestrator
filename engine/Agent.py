@@ -7,6 +7,7 @@ import json
 import logging
 import asyncio
 import threading
+import re
 from pathlib import Path
 from datetime import datetime
 import concurrent.futures
@@ -160,6 +161,219 @@ def save_to_context(role, response):
     logger.debug(f"Context saved in {elapsed:.3f}s")
 
 
+async def parse_and_execute_tool_calls(response: str, mcp_tools: list) -> str:
+    """
+    Parse tool calls from LLM response and execute them.
+    Looks for [TOOL_CALLS]...[/TOOL_CALLS] blocks in the response.
+    
+    Args:
+        response: LLM response text
+        mcp_tools: List of available MCP tool categories
+        
+    Returns:
+        Updated response with tool execution results
+    """
+    global mcp_manager
+    
+    if not mcp_manager or not mcp_tools:
+        return response
+    
+    # Find tool call blocks
+    tool_block_pattern = r'\[TOOL_CALLS\](.*?)\[/TOOL_CALLS\]'
+    matches = re.findall(tool_block_pattern, response, re.DOTALL)
+    
+    if not matches:
+        return response
+    
+    logger.info(f"Found {len(matches)} tool call block(s)")
+    
+    # Parse and execute each tool call
+    tool_results = []
+    for block in matches:
+        import ast
+        
+        # Find all function calls by looking for the pattern category.function(
+        func_starts = []
+        for match in re.finditer(r'(\w+)\.(\w+)\s*\(', block):
+            func_starts.append({
+                'start': match.start(),
+                'category': match.group(1),
+                'function': match.group(2),
+                'args_start': match.end()
+            })
+        
+        for idx, func_info in enumerate(func_starts):
+            category = func_info['category']
+            function_name = func_info['function']
+            
+            if category not in mcp_tools:
+                continue
+            
+            try:
+                # Find the matching closing parenthesis
+                args_start = func_info['args_start']
+                
+                # Determine where args end (either at next function call or end of block)
+                if idx + 1 < len(func_starts):
+                    search_end = func_starts[idx + 1]['start']
+                else:
+                    search_end = len(block)
+                
+                # Extract substring and find matching parenthesis
+                substring = block[args_start:search_end]
+                
+                # Count parentheses to find the matching close
+                paren_depth = 1
+                in_string = False
+                string_char = None
+                triple_quote = False
+                escape_next = False
+                args_end = None
+                
+                i = 0
+                while i < len(substring):
+                    char = substring[i]
+                    
+                    if escape_next:
+                        escape_next = False
+                        i += 1
+                        continue
+                    
+                    if char == '\\' and in_string:
+                        escape_next = True
+                        i += 1
+                        continue
+                    
+                    # Check for triple quotes
+                    if i + 2 < len(substring) and substring[i:i+3] in ('"""', "'''"):
+                        if not in_string:
+                            in_string = True
+                            triple_quote = True
+                            string_char = substring[i:i+3]
+                            i += 3
+                            continue
+                        elif triple_quote and substring[i:i+3] == string_char:
+                            in_string = False
+                            triple_quote = False
+                            string_char = None
+                            i += 3
+                            continue
+                    
+                    # Check for single/double quotes
+                    if char in ('"', "'") and not triple_quote:
+                        if not in_string:
+                            in_string = True
+                            string_char = char
+                        elif char == string_char:
+                            in_string = False
+                            string_char = None
+                    
+                    # Count parentheses only when not in string
+                    if not in_string:
+                        if char == '(':
+                            paren_depth += 1
+                        elif char == ')':
+                            paren_depth -= 1
+                            if paren_depth == 0:
+                                args_end = i
+                                break
+                    
+                    i += 1
+                
+                if args_end is None:
+                    logger.warning(f"Could not find matching parenthesis for {function_name}")
+                    continue
+                
+                args_str = substring[:args_end].strip()
+                
+                logger.debug(f"Extracted args for {function_name}: {args_str[:200]}...")
+                
+                # Parse arguments 
+                # For create_file with triple-quoted strings containing docstrings, 
+                # ast.literal_eval fails, so we need special handling
+                try:
+                    if function_name in ['create_file', 'write_file'] and '"""' in args_str:
+                        # Manually parse: first arg is filename, rest is content
+                        # Find the first comma that's not inside quotes
+                        first_comma = -1
+                        in_str = False
+                        str_char = None
+                        for idx, ch in enumerate(args_str):
+                            if ch in ('"', "'") and (idx == 0 or args_str[idx-1] != '\\'):
+                                if not in_str:
+                                    in_str = True
+                                    str_char = ch
+                                elif ch == str_char:
+                                    in_str = False
+                            elif ch == ',' and not in_str:
+                                first_comma = idx
+                                break
+                        
+                        if first_comma > 0:
+                            filepath_part = args_str[:first_comma].strip().strip('"').strip("'")
+                            content_part = args_str[first_comma+1:].strip()
+                            # Remove triple quotes from content
+                            if content_part.startswith('"""') and content_part.endswith('"""'):
+                                content_part = content_part[3:-3]
+                            elif content_part.startswith("'''") and content_part.endswith("'''"):
+                                content_part = content_part[3:-3]
+                            args = {"filepath": filepath_part, "content": content_part}
+                            parsed_args = None  # Skip ast.literal_eval
+                        else:
+                            # Fallback to ast
+                            eval_str = f"({args_str},)"
+                            parsed_args = ast.literal_eval(eval_str)
+                    else:
+                        # Use ast.literal_eval for other cases
+                        if args_str:
+                            eval_str = f"({args_str},)" if not args_str.endswith(',') else f"({args_str})"
+                            parsed_args = ast.literal_eval(eval_str)
+                        else:
+                            parsed_args = ()
+                    
+                    # Convert parsed_args to dict if we used ast.literal_eval
+                    if parsed_args is not None:
+                        # Convert to dict based on function
+                        if function_name in ['create_file', 'write_file']:
+                            if len(parsed_args) >= 2:
+                                args = {"filepath": parsed_args[0], "content": parsed_args[1]}
+                            else:
+                                args = {"filepath": parsed_args[0] if parsed_args else "", "content": ""}
+                        elif function_name in ['create_directory', 'list_directory']:
+                            args = {"dirpath": parsed_args[0] if parsed_args else "."}
+                        elif function_name == 'execute_python':
+                            args = {"code": parsed_args[0] if parsed_args else ""}
+                        elif function_name == 'read_file':
+                            args = {"filepath": parsed_args[0] if parsed_args else ""}
+                        else:
+                            args = {"filepath": parsed_args[0] if parsed_args else ""}
+                    # else: args was already set in the manual parsing above
+                
+                except (ValueError, SyntaxError) as e:
+                    logger.warning(f"Failed to parse args for {function_name}: {e}")
+                    continue
+                
+                content_size = len(args.get('content', args.get('code', '')))
+                logger.info(f"Executing: {category}.{function_name} (content size: {content_size} chars)")
+                
+                # Execute the tool
+                result = await mcp_manager.execute_tool(function_name, args)
+                tool_results.append(f"✓ {function_name}: {result}")
+                
+            except Exception as e:
+                logger.error(f"Tool execution failed for {function_name}: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
+                tool_results.append(f"✗ {function_name}: Error - {str(e)}")
+    
+    # Append results to response
+    if tool_results:
+        results_text = "\n\n[TOOL_EXECUTION_RESULTS]\n" + "\n".join(tool_results) + "\n[/TOOL_EXECUTION_RESULTS]"
+        response = response + results_text
+    
+    return response
+
+
 def read_context_for_agent(agent_prompt: str, max_memories: int = 5):
     """
     Retrieve only relevant context using RAG
@@ -192,7 +406,7 @@ def find_agent_by_id(yaml_data, agent_id):
     return None
 
 
-def execute_single_agent(agent_data, yaml_data, context="", step_info=""):
+async def execute_single_agent(agent_data, yaml_data, context="", step_info=""):
     """
     Execute a single agent and return its response
     
@@ -221,7 +435,7 @@ def execute_single_agent(agent_data, yaml_data, context="", step_info=""):
     if mcp_tools:
         logger.info(f"{step_info}MCP Tools: {', '.join(mcp_tools)}")
     
-    # Build promptF
+    # Build prompt
     base_prompt = f"You are {role}. Your goal is: {goal}. {description} {instructions}".strip()
     
     # Add MCP tool information to prompt if available
@@ -262,11 +476,19 @@ def execute_single_agent(agent_data, yaml_data, context="", step_info=""):
     request_start = datetime.now()
     logger.info(f"{step_info}Sending request to {model_name}...")
     
-    response = get_llm_response(prompt, model_name, model_config)
+    # Run the CPU-bound LLM request in a thread pool to avoid blocking the event loop
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(None, get_llm_response, prompt, model_name, model_config)
     
     response_end = datetime.now()
     elapsed = (response_end - request_start).total_seconds()
     logger.info(f"{step_info}Response received in {elapsed:.2f}s ({len(response)} chars)")
+    
+    # Parse and execute tool calls if MCP tools are available
+    if mcp_manager and mcp_tools:
+        logger.info(f"{step_info}Checking for tool calls...")
+        # Run async tool execution
+        response = await parse_and_execute_tool_calls(response, mcp_tools)
     
     # Display response
     logger.info(f"\n{step_info}{role} Response:")
@@ -280,7 +502,7 @@ def execute_single_agent(agent_data, yaml_data, context="", step_info=""):
     return response
 
 
-def execute_sequential_workflow(yaml_data):
+async def execute_sequential_workflow(yaml_data):
     """Execute sequential workflow"""
     logger.info("="*80)
     logger.info("EXECUTING SEQUENTIAL WORKFLOW")
@@ -303,20 +525,21 @@ def execute_sequential_workflow(yaml_data):
             continue
         
         # Build context for agents after the first one
-        context = ""
-        if step_idx > 0:
+        if step_idx == 0:
+            context = ""
+        else:
             logger.info("Retrieving relevant context from previous steps (RAG)")
             base_prompt = f"You are {agent_data.get('role', 'Agent')}. Your goal is: {agent_data.get('goal', '')}"
             context = read_context_for_agent(base_prompt, max_memories=5)
         
         # Execute agent
-        execute_single_agent(agent_data, yaml_data, context, step_info="")
+        await execute_single_agent(agent_data, yaml_data, context, step_info="")
 
 
-def execute_parallel_workflow(yaml_data):
-    """Execute parallel workflow with TRUE parallel execution using threading"""
+async def execute_parallel_workflow(yaml_data):
+    """Execute parallel workflow with TRUE parallel execution using asyncio"""
     logger.info("="*80)
-    logger.info("EXECUTING PARALLEL WORKFLOW (TRUE PARALLEL)")
+    logger.info("EXECUTING PARALLEL WORKFLOW (ASYNC)")
     logger.info("="*80)
     
     branches = yaml_data["workflow"]["branches"]
@@ -328,7 +551,7 @@ def execute_parallel_workflow(yaml_data):
         logger.info(f"Consolidation agent: {then_agent_id}")
     
     # Prepare branch execution function
-    def execute_branch(branch_info):
+    async def execute_branch(branch_info):
         branch_idx, branch_name = branch_info
         logger.info(f"\n{'='*60}")
         logger.info(f"[PARALLEL] BRANCH {branch_idx + 1}/{len(branches)}: '{branch_name}'")
@@ -342,29 +565,25 @@ def execute_parallel_workflow(yaml_data):
         
         # Execute agent (no context for parallel branches)
         step_info = f"[Branch {branch_idx + 1}] "
-        return execute_single_agent(agent_data, yaml_data, context="", step_info=step_info)
+        return await execute_single_agent(agent_data, yaml_data, context="", step_info=step_info)
     
-    # Execute all branches in parallel using ThreadPoolExecutor
-    branch_responses = []
+    # Execute all branches in parallel using asyncio.gather
     logger.info(f"\n🚀 Starting {len(branches)} parallel executions...")
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(branches)) as executor:
-        # Submit all branch executions
-        future_to_branch = {
-            executor.submit(execute_branch, (idx, branch)): branch 
-            for idx, branch in enumerate(branches)
-        }
-        
-        # Collect results as they complete
-        for future in concurrent.futures.as_completed(future_to_branch):
-            branch_name = future_to_branch[future]
-            try:
-                response = future.result()
-                if response:
-                    branch_responses.append(response)
-                    logger.info(f"✓ Branch '{branch_name}' completed")
-            except Exception as e:
-                logger.error(f"✗ Branch '{branch_name}' failed: {e}")
+    branch_tasks = [execute_branch((idx, branch)) for idx, branch in enumerate(branches)]
+    
+    # Run tasks concurrently
+    results = await asyncio.gather(*branch_tasks, return_exceptions=True)
+    
+    # Process results
+    branch_responses = []
+    for idx, result in enumerate(results):
+        branch_name = branches[idx]
+        if isinstance(result, Exception):
+            logger.error(f"✗ Branch '{branch_name}' failed: {result}")
+        elif result:
+            branch_responses.append(result)
+            logger.info(f"✓ Branch '{branch_name}' completed")
     
     logger.info(f"\n✓ All {len(branch_responses)} parallel branches completed")
     
@@ -386,7 +605,7 @@ def execute_parallel_workflow(yaml_data):
             logger.info(f"Including {len(branch_responses)} branch responses in context")
             
             # Execute consolidation agent
-            execute_single_agent(agent_data, yaml_data, context, step_info="[CONSOLIDATION] ")
+            await execute_single_agent(agent_data, yaml_data, context, step_info="[CONSOLIDATION] ")
 
 
 def run_agent(yaml_file):
@@ -413,8 +632,9 @@ def run_agent(yaml_file):
             # Load YAML data
             yaml_data = load_yaml_data(yaml_file)
             
-            # Initialize MCP manager if mcp_tools are configured
+            # Initialize MCP manager if tools are configured
             if 'tools' in yaml_data:
+                logger.info(f"Tools config found: {yaml_data['tools']}")
                 logger.info("Initializing MCP Tools Manager...")
                 mcp_manager = MCPManager(yaml_data['tools'])
                 await mcp_manager.initialize()
@@ -428,9 +648,9 @@ def run_agent(yaml_file):
             workflow_type = yaml_data["workflow"]["type"]
             
             if workflow_type == "sequential":
-                execute_sequential_workflow(yaml_data)
+                await execute_sequential_workflow(yaml_data)
             elif workflow_type == "parallel":
-                execute_parallel_workflow(yaml_data)
+                await execute_parallel_workflow(yaml_data)
             else:
                 logger.error(f"Unknown workflow type: {workflow_type}")
                 return

@@ -1,0 +1,715 @@
+2026-01-18 11:00:33 | INFO     | ================================================================================
+2026-01-18 11:00:33 | INFO     | Logging initialized - Log file: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\logs\workflow_20260118_110033.log
+2026-01-18 11:00:33 | INFO     | ================================================================================
+2026-01-18 11:00:33 | INFO     | ================================================================================
+2026-01-18 11:00:33 | INFO     | WORKFLOW EXECUTION STARTED
+2026-01-18 11:00:33 | INFO     | Start Time: 2026-01-18 11:00:33
+2026-01-18 11:00:33 | INFO     | YAML File: engine\examples\config_groq_simple.yml
+2026-01-18 11:00:33 | INFO     | ================================================================================
+2026-01-18 11:00:33 | INFO     | Clearing context for fresh workflow start
+2026-01-18 11:00:33 | DEBUG    | JSON context file reset: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\context\raw.json
+2026-01-18 11:00:33 | DEBUG    | RAG memory cleared
+2026-01-18 11:00:33 | INFO     | Context cleared successfully in 0.002s
+2026-01-18 11:00:33 | INFO     | Loading YAML configuration from: engine\examples\config_groq_simple.yml
+2026-01-18 11:00:33 | INFO     | YAML loaded successfully in 0.00s
+2026-01-18 11:00:33 | DEBUG    | Configuration contains 3 agents
+2026-01-18 11:00:33 | DEBUG    | Workflow type: sequential
+2026-01-18 11:00:33 | INFO     | Tools config found: {'filesystem': {'server': 'python', 'args': ['simple_mcp_server.py'], 'env': {}}}
+2026-01-18 11:00:33 | INFO     | Initializing MCP Tools Manager...
+2026-01-18 11:00:33 | INFO     | MCP Manager initialized with 5 tools
+2026-01-18 11:00:33 | INFO     | Configuration Summary:
+2026-01-18 11:00:33 | INFO     |   - Total Agents: 3
+2026-01-18 11:00:33 | INFO     |   - Workflow Type: sequential
+2026-01-18 11:00:33 | INFO     | ================================================================================
+2026-01-18 11:00:33 | INFO     | EXECUTING SEQUENTIAL WORKFLOW
+2026-01-18 11:00:33 | INFO     | ================================================================================
+2026-01-18 11:00:33 | INFO     | Total steps in workflow: 3
+2026-01-18 11:00:33 | DEBUG    | Step sequence: code_writer -> code_tester -> code_validator
+2026-01-18 11:00:33 | INFO     | 
+================================================================================
+2026-01-18 11:00:33 | INFO     | STEP 1/3: Processing agent 'code_writer'
+2026-01-18 11:00:33 | INFO     | ================================================================================
+2026-01-18 11:00:33 | INFO     | Agent Role: Python Code Writer
+2026-01-18 11:00:33 | INFO     | Agent Goal: Write a simple calculator Python script
+2026-01-18 11:00:33 | INFO     | Model: llama-3.1-8b-instant
+2026-01-18 11:00:33 | INFO     | MCP Tools: filesystem
+2026-01-18 11:00:33 | DEBUG    | Added 5 MCP tool schemas to prompt
+2026-01-18 11:00:33 | DEBUG    | Prompt length: 721 chars
+2026-01-18 11:00:33 | DEBUG    | Saving context for role: User (length: 721 chars)
+2026-01-18 11:00:33 | DEBUG    | Saved to JSON backup: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\context\raw.json
+2026-01-18 11:00:38 | DEBUG    | Saved to RAG memory
+2026-01-18 11:00:38 | DEBUG    | Context saved in 4.333s
+2026-01-18 11:00:38 | INFO     | Sending request to llama-3.1-8b-instant...
+2026-01-18 11:00:40 | INFO     | Response received in 2.44s (5257 chars)
+2026-01-18 11:00:40 | INFO     | Checking for tool calls...
+2026-01-18 11:00:40 | INFO     | Found 1 tool call block(s)
+2026-01-18 11:00:40 | DEBUG    | Extracted args for create_file: "calculator.py", """
+# Define a function for addition
+def add(num1, num2):
+    """
+    Returns the sum of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The seco...
+2026-01-18 11:00:40 | INFO     | Executing: filesystem.create_file (content size: 2500 chars)
+2026-01-18 11:00:40 | INFO     | 
+Python Code Writer Response:
+2026-01-18 11:00:40 | INFO     | ------------------------------------------------------------
+2026-01-18 11:00:40 | INFO     | **Simple Calculator Python Script**
+=====================================
+
+This script provides a simple calculator with add, subtract, multiply, and divide functions.
+
+```python
+# Define a function for addition
+def add(num1, num2):
+    """
+    Returns the sum of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The sum of num1 and num2.
+    """
+    return num1 + num2
+
+# Define a function for subtraction
+def subtract(num1, num2):
+    """
+    Returns the difference of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The difference of num1 and num2.
+    """
+    return num1 - num2
+
+# Define a function for multiplication
+def multiply(num1, num2):
+    """
+    Returns the product of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The product of num1 and num2.
+    """
+    return num1 * num2
+
+# Define a function for division
+def divide(num1, num2):
+    """
+    Returns the quotient of two numbers.
+
+    Args:
+        num1 (float): The dividend.
+        num2 (float): The divisor.
+
+    Returns:
+        float: The quotient of num1 and num2.
+
+    Raises:
+        ZeroDivisionError: If num2 is zero.
+    """
+    if num2 == 0:
+        raise ZeroDivisionError("Cannot divide by zero")
+    return num1 / num2
+
+# Main function to handle user input
+def main():
+    print("Simple Calculator")
+    print("-----------------")
+
+    while True:
+        print("1. Addition")
+        print("2. Subtraction")
+        print("3. Multiplication")
+        print("4. Division")
+        print("5. Quit")
+
+        choice = input("Choose an operation (1-5): ")
+
+        if choice in ["1", "2", "3", "4"]:
+            num1 = float(input("Enter the first number: "))
+            num2 = float(input("Enter the second number: "))
+
+            if choice == "1":
+                print(f"{num1} + {num2} = {add(num1, num2)}")
+            elif choice == "2":
+                print(f"{num1} - {num2} = {subtract(num1, num2)}")
+            elif choice == "3":
+                print(f"{num1} * {num2} = {multiply(num1, num2)}")
+            elif choice == "4":
+                try:
+                    print(f"{num1} / {num2} = {divide(num1, num2)}")
+                except ZeroDivisionError as e:
+                    print(str(e))
+        elif choice == "5":
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please choose a valid operation.")
+
+# Run the main function
+if __name__ == "__main__":
+    main()
+```
+
+[TOOL_CALLS]
+filesystem.create_file("calculator.py", """
+# Define a function for addition
+def add(num1, num2):
+    """
+    Returns the sum of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The sum of num1 and num2.
+    """
+    return num1 + num2
+
+# Define a function for subtraction
+def subtract(num1, num2):
+    """
+    Returns the difference of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The difference of num1 and num2.
+    """
+    return num1 - num2
+
+# Define a function for multiplication
+def multiply(num1, num2):
+    """
+    Returns the product of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The product of num1 and num2.
+    """
+    return num1 * num2
+
+# Define a function for division
+def divide(num1, num2):
+    """
+    Returns the quotient of two numbers.
+
+    Args:
+        num1 (float): The dividend.
+        num2 (float): The divisor.
+
+    Returns:
+        float: The quotient of num1 and num2.
+
+    Raises:
+        ZeroDivisionError: If num2 is zero.
+    """
+    if num2 == 0:
+        raise ZeroDivisionError("Cannot divide by zero")
+    return num1 / num2
+
+# Main function to handle user input
+def main():
+    print("Simple Calculator")
+    print("-----------------")
+
+    while True:
+        print("1. Addition")
+        print("2. Subtraction")
+        print("3. Multiplication")
+        print("4. Division")
+        print("5. Quit")
+
+        choice = input("Choose an operation (1-5): ")
+
+        if choice in ["1", "2", "3", "4"]:
+            num1 = float(input("Enter the first number: "))
+            num2 = float(input("Enter the second number: "))
+
+            if choice == "1":
+                print(f"{num1} + {num2} = {add(num1, num2)}")
+            elif choice == "2":
+                print(f"{num1} - {num2} = {subtract(num1, num2)}")
+            elif choice == "3":
+                print(f"{num1} * {num2} = {multiply(num1, num2)}")
+            elif choice == "4":
+                try:
+                    print(f"{num1} / {num2} = {divide(num1, num2)}")
+                except ZeroDivisionError as e:
+                    print(str(e))
+        elif choice == "5":
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please choose a valid operation.")
+
+# Run the main function
+if __name__ == "__main__":
+    main()
+""")
+[/TOOL_CALLS]
+
+[TOOL_EXECUTION_RESULTS]
+✓ create_file: ✓ File created successfully: calculator.py
+[/TOOL_EXECUTION_RESULTS]
+2026-01-18 11:00:40 | INFO     | ------------------------------------------------------------
+2026-01-18 11:00:40 | DEBUG    | Saving context for role: Python Code Writer (length: 5367 chars)
+2026-01-18 11:00:40 | DEBUG    | Saved to JSON backup: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\context\raw.json
+2026-01-18 11:00:40 | DEBUG    | Saved to RAG memory
+2026-01-18 11:00:40 | DEBUG    | Context saved in 0.082s
+2026-01-18 11:00:40 | INFO     | 
+================================================================================
+2026-01-18 11:00:40 | INFO     | STEP 2/3: Processing agent 'code_tester'
+2026-01-18 11:00:40 | INFO     | ================================================================================
+2026-01-18 11:00:40 | INFO     | Retrieving relevant context from previous steps (RAG)
+2026-01-18 11:00:40 | DEBUG    | Retrieving relevant context (max: 5 memories)
+2026-01-18 11:00:40 | DEBUG    | Retrieved 6116 chars of relevant context in 0.014s
+2026-01-18 11:00:40 | INFO     | Agent Role: Code Tester
+2026-01-18 11:00:40 | INFO     | Agent Goal: Read and describe the calculator code
+2026-01-18 11:00:40 | INFO     | Model: llama-3.1-8b-instant
+2026-01-18 11:00:40 | INFO     | MCP Tools: filesystem
+2026-01-18 11:00:40 | DEBUG    | Added 5 MCP tool schemas to prompt
+2026-01-18 11:00:40 | DEBUG    | Including context in prompt
+2026-01-18 11:00:40 | DEBUG    | Prompt length: 6678 chars
+2026-01-18 11:00:40 | DEBUG    | Saving context for role: User (length: 533 chars)
+2026-01-18 11:00:40 | DEBUG    | Saved to JSON backup: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\context\raw.json
+2026-01-18 11:00:40 | DEBUG    | Saved to RAG memory
+2026-01-18 11:00:40 | DEBUG    | Context saved in 0.028s
+2026-01-18 11:00:40 | INFO     | Sending request to llama-3.1-8b-instant...
+2026-01-18 11:00:42 | INFO     | Response received in 1.78s (4127 chars)
+2026-01-18 11:00:42 | INFO     | Checking for tool calls...
+2026-01-18 11:00:42 | INFO     | Found 2 tool call block(s)
+2026-01-18 11:00:42 | DEBUG    | Extracted args for read_file: "calculator.py"...
+2026-01-18 11:00:42 | INFO     | Executing: filesystem.read_file (content size: 0 chars)
+2026-01-18 11:00:42 | DEBUG    | Extracted args for create_file: "calculator.py", """
+# Define a function for addition
+def add(num1, num2):
+    """
+    Returns the sum of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The seco...
+2026-01-18 11:00:42 | INFO     | Executing: filesystem.create_file (content size: 2500 chars)
+2026-01-18 11:00:42 | INFO     | 
+Code Tester Response:
+2026-01-18 11:00:42 | INFO     | ------------------------------------------------------------
+2026-01-18 11:00:42 | INFO     | [TOOL_CALLS]
+filesystem.read_file("calculator.py")
+[/TOOL_CALLS]
+
+The calculator.py file contains a simple calculator script with add, subtract, multiply, and divide functions. Here's a breakdown of the code:
+
+1. The script starts by defining four functions:
+   - `add(num1, num2)`: Returns the sum of two numbers.
+   - `subtract(num1, num2)`: Returns the difference of two numbers.
+   - `multiply(num1, num2)`: Returns the product of two numbers.
+   - `divide(num1, num2)`: Returns the quotient of two numbers, raising a `ZeroDivisionError` if the divisor is zero.
+
+2. The `main()` function serves as the entry point for the script. It prints a menu with options for addition, subtraction, multiplication, division, and quitting. It then enters a loop where it repeatedly asks the user to choose an operation and enter two numbers.
+
+3. Based on the user's choice, it calls the corresponding function (add, subtract, multiply, or divide) with the two input numbers and prints the result. If the user chooses division and the divisor is zero, it catches the `ZeroDivisionError` and prints an error message.
+
+4. If the user chooses to quit, it prints a goodbye message and breaks out of the loop.
+
+5. The script uses `if __name__ == "__main__":` to ensure that the `main()` function is only executed when the script is run directly (not when it's imported as a module).
+
+The code is well-structured, readable, and follows good practices. It includes docstrings for each function to provide documentation and includes error handling for division by zero.
+
+[TOOL_CALLS]
+filesystem.create_file("calculator.py", """
+# Define a function for addition
+def add(num1, num2):
+    """
+    Returns the sum of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The sum of num1 and num2.
+    """
+    return num1 + num2
+
+# Define a function for subtraction
+def subtract(num1, num2):
+    """
+    Returns the difference of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The difference of num1 and num2.
+    """
+    return num1 - num2
+
+# Define a function for multiplication
+def multiply(num1, num2):
+    """
+    Returns the product of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The product of num1 and num2.
+    """
+    return num1 * num2
+
+# Define a function for division
+def divide(num1, num2):
+    """
+    Returns the quotient of two numbers.
+
+    Args:
+        num1 (float): The dividend.
+        num2 (float): The divisor.
+
+    Returns:
+        float: The quotient of num1 and num2.
+
+    Raises:
+        ZeroDivisionError: If num2 is zero.
+    """
+    if num2 == 0:
+        raise ZeroDivisionError("Cannot divide by zero")
+    return num1 / num2
+
+# Main function to handle user input
+def main():
+    print("Simple Calculator")
+    print("-----------------")
+
+    while True:
+        print("1. Addition")
+        print("2. Subtraction")
+        print("3. Multiplication")
+        print("4. Division")
+        print("5. Quit")
+
+        choice = input("Choose an operation (1-5): ")
+
+        if choice in ["1", "2", "3", "4"]:
+            num1 = float(input("Enter the first number: "))
+            num2 = float(input("Enter the second number: "))
+
+            if choice == "1":
+                print(f"{num1} + {num2} = {add(num1, num2)}")
+            elif choice == "2":
+                print(f"{num1} - {num2} = {subtract(num1, num2)}")
+            elif choice == "3":
+                print(f"{num1} * {num2} = {multiply(num1, num2)}")
+            elif choice == "4":
+                try:
+                    print(f"{num1} / {num2} = {divide(num1, num2)}")
+                except ZeroDivisionError as e:
+                    print(str(e))
+        elif choice == "5":
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please choose a valid operation.")
+
+# Run the main function
+if __name__ == "__main__":
+    main()
+""")
+[/TOOL_CALLS]
+
+[TOOL_EXECUTION_RESULTS]
+✓ read_file: 
+# Define a function for addition
+def add(num1, num2):
+    """
+    Returns the sum of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The sum of num1 and num2.
+    """
+    return num1 + num2
+
+# Define a function for subtraction
+def subtract(num1, num2):
+    """
+    Returns the difference of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The difference of num1 and num2.
+    """
+    return num1 - num2
+
+# Define a function for multiplication
+def multiply(num1, num2):
+    """
+    Returns the product of two numbers.
+
+    Args:
+        num1 (float): The first number.
+        num2 (float): The second number.
+
+    Returns:
+        float: The product of num1 and num2.
+    """
+    return num1 * num2
+
+# Define a function for division
+def divide(num1, num2):
+    """
+    Returns the quotient of two numbers.
+
+    Args:
+        num1 (float): The dividend.
+        num2 (float): The divisor.
+
+    Returns:
+        float: The quotient of num1 and num2.
+
+    Raises:
+        ZeroDivisionError: If num2 is zero.
+    """
+    if num2 == 0:
+        raise ZeroDivisionError("Cannot divide by zero")
+    return num1 / num2
+
+# Main function to handle user input
+def main():
+    print("Simple Calculator")
+    print("-----------------")
+
+    while True:
+        print("1. Addition")
+        print("2. Subtraction")
+        print("3. Multiplication")
+        print("4. Division")
+        print("5. Quit")
+
+        choice = input("Choose an operation (1-5): ")
+
+        if choice in ["1", "2", "3", "4"]:
+            num1 = float(input("Enter the first number: "))
+            num2 = float(input("Enter the second number: "))
+
+            if choice == "1":
+                print(f"{num1} + {num2} = {add(num1, num2)}")
+            elif choice == "2":
+                print(f"{num1} - {num2} = {subtract(num1, num2)}")
+            elif choice == "3":
+                print(f"{num1} * {num2} = {multiply(num1, num2)}")
+            elif choice == "4":
+                try:
+                    print(f"{num1} / {num2} = {divide(num1, num2)}")
+                except ZeroDivisionError as e:
+                    print(str(e))
+        elif choice == "5":
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please choose a valid operation.")
+
+# Run the main function
+if __name__ == "__main__":
+    main()
+
+✓ create_file: ✓ File created successfully: calculator.py
+[/TOOL_EXECUTION_RESULTS]
+2026-01-18 11:00:42 | INFO     | ------------------------------------------------------------
+2026-01-18 11:00:42 | DEBUG    | Saving context for role: Code Tester (length: 6751 chars)
+2026-01-18 11:00:42 | DEBUG    | Saved to JSON backup: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\context\raw.json
+2026-01-18 11:00:42 | DEBUG    | Saved to RAG memory
+2026-01-18 11:00:42 | DEBUG    | Context saved in 0.117s
+2026-01-18 11:00:42 | INFO     | 
+================================================================================
+2026-01-18 11:00:42 | INFO     | STEP 3/3: Processing agent 'code_validator'
+2026-01-18 11:00:42 | INFO     | ================================================================================
+2026-01-18 11:00:42 | INFO     | Retrieving relevant context from previous steps (RAG)
+2026-01-18 11:00:42 | DEBUG    | Retrieving relevant context (max: 5 memories)
+2026-01-18 11:00:42 | DEBUG    | Retrieved 13423 chars of relevant context in 0.013s
+2026-01-18 11:00:42 | INFO     | Agent Role: Python Code Validator
+2026-01-18 11:00:42 | INFO     | Agent Goal: Validate the calculator code by running tests
+2026-01-18 11:00:42 | INFO     | Model: llama-3.1-8b-instant
+2026-01-18 11:00:42 | INFO     | MCP Tools: filesystem
+2026-01-18 11:00:42 | DEBUG    | Added 5 MCP tool schemas to prompt
+2026-01-18 11:00:42 | DEBUG    | Including context in prompt
+2026-01-18 11:00:42 | DEBUG    | Prompt length: 14181 chars
+2026-01-18 11:00:42 | DEBUG    | Saving context for role: User (length: 729 chars)
+2026-01-18 11:00:42 | DEBUG    | Saved to JSON backup: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\context\raw.json
+2026-01-18 11:00:42 | DEBUG    | Saved to RAG memory
+2026-01-18 11:00:42 | DEBUG    | Context saved in 0.035s
+2026-01-18 11:00:42 | INFO     | Sending request to llama-3.1-8b-instant...
+2026-01-18 11:00:56 | INFO     | Response received in 14.14s (3064 chars)
+2026-01-18 11:00:56 | INFO     | Checking for tool calls...
+2026-01-18 11:00:56 | INFO     | Found 1 tool call block(s)
+2026-01-18 11:00:56 | INFO     | 
+Python Code Validator Response:
+2026-01-18 11:00:56 | INFO     | ------------------------------------------------------------
+2026-01-18 11:00:56 | INFO     | To validate the calculator code by running tests, we can use the execute_python tool to run the calculator script and test its functions.
+
+Here's the Python code that imports and tests the calculator functions:
+
+```python
+# Import the calculator functions
+from calculator import add, subtract, multiply, divide
+
+# Test the add function
+def test_add():
+    assert add(2, 3) == 5
+    assert add(-2, 3) == 1
+    assert add(-2, -3) == -5
+
+# Test the subtract function
+def test_subtract():
+    assert subtract(2, 3) == -1
+    assert subtract(-2, 3) == -5
+    assert subtract(-2, -3) == 1
+
+# Test the multiply function
+def test_multiply():
+    assert multiply(2, 3) == 6
+    assert multiply(-2, 3) == -6
+    assert multiply(-2, -3) == 6
+
+# Test the divide function
+def test_divide():
+    assert divide(6, 2) == 3
+    assert divide(-6, 2) == -3
+    assert divide(-6, -2) == 3
+
+# Test division by zero
+def test_divide_by_zero():
+    try:
+        divide(6, 0)
+        assert False, "Expected ZeroDivisionError"
+    except ZeroDivisionError:
+        assert True
+
+# Run the tests
+def run_tests():
+    print("Running tests...")
+    test_add()
+    test_subtract()
+    test_multiply()
+    test_divide()
+    test_divide_by_zero()
+    print("All tests passed!")
+
+# Execute the calculator script
+def execute_calculator():
+    output = execute_python("calculator.py")
+    return output
+
+# Run the calculator script and tests
+def run_calculator_and_tests():
+    execute_calculator()
+    run_tests()
+
+# Execute the run_calculator_and_tests function
+run_calculator_and_tests()
+```
+
+To run the tests, we can use the execute_python tool to run the calculator script and then run the tests.
+
+Here's the execute_python tool call:
+
+```python
+[TOOL_CALLS]
+execute_python("calculator.py")
+execute_python("""
+# Import the calculator functions
+from calculator import add, subtract, multiply, divide
+
+# Test the add function
+def test_add():
+    assert add(2, 3) == 5
+    assert add(-2, 3) == 1
+    assert add(-2, -3) == -5
+
+# Test the subtract function
+def test_subtract():
+    assert subtract(2, 3) == -1
+    assert subtract(-2, 3) == -5
+    assert subtract(-2, -3) == 1
+
+# Test the multiply function
+def test_multiply():
+    assert multiply(2, 3) == 6
+    assert multiply(-2, 3) == -6
+    assert multiply(-2, -3) == 6
+
+# Test the divide function
+def test_divide():
+    assert divide(6, 2) == 3
+    assert divide(-6, 2) == -3
+    assert divide(-6, -2) == 3
+
+# Test division by zero
+def test_divide_by_zero():
+    try:
+        divide(6, 0)
+        assert False, "Expected ZeroDivisionError"
+    except ZeroDivisionError:
+        assert True
+
+# Run the tests
+def run_tests():
+    print("Running tests...")
+    test_add()
+    test_subtract()
+    test_multiply()
+    test_divide()
+    test_divide_by_zero()
+    print("All tests passed!")
+
+# Run the calculator script and tests
+def run_calculator_and_tests():
+    run_tests()
+
+# Execute the run_calculator_and_tests function
+run_calculator_and_tests()
+""")
+[/TOOL_CALLS]
+```
+
+This will run the calculator script and the tests, and print the results.
+2026-01-18 11:00:56 | INFO     | ------------------------------------------------------------
+2026-01-18 11:00:56 | DEBUG    | Saving context for role: Python Code Validator (length: 3064 chars)
+2026-01-18 11:00:56 | DEBUG    | Saved to JSON backup: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\context\raw.json
+2026-01-18 11:00:56 | DEBUG    | Saved to RAG memory
+2026-01-18 11:00:56 | DEBUG    | Context saved in 0.052s
+2026-01-18 11:00:56 | INFO     | ================================================================================
+2026-01-18 11:00:56 | INFO     | WORKFLOW EXECUTION COMPLETED SUCCESSFULLY
+2026-01-18 11:00:56 | INFO     | End Time: 2026-01-18 11:00:56
+2026-01-18 11:00:56 | INFO     | Total Duration: 23.89 seconds
+2026-01-18 11:00:56 | INFO     | Context saved to: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\context\raw.json
+2026-01-18 11:00:56 | INFO     | Total memories in RAG: 6
+2026-01-18 11:00:56 | INFO     | Log file: D:\Hackathons\Auraverse2_P2\YML-Agentic-Orchestrator\engine\logs\workflow_20260118_110033.log
+2026-01-18 11:00:56 | INFO     | ================================================================================

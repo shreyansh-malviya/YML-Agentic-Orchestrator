@@ -13,7 +13,10 @@ from contextlib import asynccontextmanager
 from mcp import ClientSession, StdioServerParameters
 import mcp.types as types
 from mcp.shared.message import SessionMessage
+import logging
 import traceback
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -36,13 +39,33 @@ async def custom_stdio_client(params: StdioServerParameters):
     read_stream_writer, read_stream = anyio.create_memory_object_stream(100)
     write_stream, write_stream_reader = anyio.create_memory_object_stream(100)
     
+    # Prepare environment - merge with system env to avoid issues
+    import os
+    full_env = os.environ.copy()
+    if env:
+        full_env.update(env)
+    
+    # Add flags to reset asyncio state
+    full_env['PYTHONUNBUFFERED'] = '1'
+    full_env['PYTHONASYNCIODEBUG'] = '0'
+    
     # Use asyncio directly to avoid anyio/Windows issues
+    # On Windows, use CREATE_NO_WINDOW to create process with fresh state
+    create_kwargs = {
+        'stdin': asyncio.subprocess.PIPE,
+        'stdout': asyncio.subprocess.PIPE,
+        'stderr': asyncio.subprocess.PIPE,
+        'env': full_env
+    }
+    
+    # Windows-specific: use creation flags to isolate process
+    if sys.platform == 'win32':
+        import subprocess
+        create_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
+    
     process = await asyncio.create_subprocess_exec(
         command, *args,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        env=env
+        **create_kwargs
     )
     
     async def stdout_reader():
@@ -100,21 +123,58 @@ async def custom_stdio_client(params: StdioServerParameters):
     try:
         yield read_stream, write_stream
     finally:
-        # Cleanup
+        # Cleanup sequence for proper resource management
+        
+        # Step 1: Cancel background tasks
         for task in tasks:
-            task.cancel()
-            
+            if not task.done():
+                task.cancel()
+        
+        # Step 2: Wait for tasks to finish cancelling
+        await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Step 3: Close stdin first to signal process to exit
         try:
-            process.terminate()
-            await process.wait()
+            if process.stdin and not process.stdin.is_closing():
+                process.stdin.close()
+                await asyncio.sleep(0.05)  # Give process time to see stdin close
         except:
             pass
         
-        # Close streams
-        await read_stream.aclose()
-        await write_stream.aclose()
-        await read_stream_writer.aclose()
-        await write_stream_reader.aclose()
+        # Step 4: Terminate process gently
+        try:
+            if process.returncode is None:
+                process.terminate()
+                # Wait up to 2 seconds for graceful termination
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    # Force kill if it doesn't terminate gracefully
+                    try:
+                        process.kill()
+                        await process.wait()
+                    except:
+                        pass
+        except:
+            pass
+        
+        # Step 5: Close streams properly
+        try:
+            await read_stream.aclose()
+        except:
+            pass
+        try:
+            await write_stream.aclose()
+        except:
+            pass
+        try:
+            await read_stream_writer.aclose()
+        except:
+            pass
+        try:
+            await write_stream_reader.aclose()
+        except:
+            pass
 
 
 class MCPManager:
@@ -140,14 +200,14 @@ class MCPManager:
         if not self.mcp_tools_config:
             return
         
-        print("\n🔧 Initializing MCP Tools...")
+        logger.info("Initializing MCP Tools...")
         for tool_name, config in self.mcp_tools_config.items():
             try:
                 await self._start_server(tool_name, config)
             except Exception as e:
-                print(f"  ⚠️  Failed to initialize {tool_name}: {e}")
-                traceback.print_exc()
-                print(f"     Continuing without this tool...")
+                logger.error(f"Failed to initialize {tool_name}: {e}")
+                logger.error(traceback.format_exc())
+                logger.warning(f"Continuing without this tool...")
     
     async def _start_server(self, tool_name: str, config: Dict[str, Any]):
         """
@@ -157,7 +217,7 @@ class MCPManager:
             tool_name: Name identifier for the tool
             config: Server configuration including command, args, and env
         """
-        print(f"  Starting {tool_name}...")
+        logger.info(f"Starting {tool_name}...")
         
         cmd = config['server']
         if cmd == "python":
@@ -194,9 +254,10 @@ class MCPManager:
                 'category': tool_name
             }
         
-        print(f"  ✓ {tool_name}: {len(tools_response.tools)} tools ready")
+        logger.info(f"{tool_name}: {len(tools_response.tools)} tools ready")
         for tool in tools_response.tools:
-            print(f"    • {tool.name}")
+            logger.info(f"  • {tool.name}")
+
     
     def get_tool_schemas_for_agent(self, tool_categories: List[str]) -> List[Dict[str, Any]]:
         """
@@ -237,9 +298,10 @@ class MCPManager:
             tool_info = self._fuzzy_find_tool(function_name)
             
         if not tool_info:
+            logger.error(f"Tool '{function_name}' not found. Available tools: {list(self.tool_schemas.keys())}")
             raise ValueError(f"Tool '{function_name}' not found")
         
-        print(f"  🔨 Executing: {function_name}")
+        logger.info(f"Executing: {function_name}")
         
         try:
             category = tool_info['category']
@@ -255,11 +317,11 @@ class MCPManager:
                     if hasattr(content_item, 'text'):
                         result_text += content_item.text
             
-            print(f"  ✓ Success")
+            logger.info(f"Success")
             return result_text
             
         except Exception as e:
-            print(f"  ✗ MCP execution failed: {e}")
+            logger.error(f"MCP execution failed: {e}")
             raise
 
     def _mcp_tool_to_schema(self, mcp_tool) -> Dict[str, Any]:
@@ -306,20 +368,46 @@ class MCPManager:
         return None
 
     async def shutdown(self):
-        """Cleanup all MCP servers"""
-        print("\n🔧 Shutting down MCP servers...")
+        """Cleanup all MCP servers with proper resource management"""
+        logger.info("Shutting down MCP servers...")
         
-        # Close sessions first
-        for tool_name, info in self.sessions.items():
+        # Step 1: Close sessions gracefully
+        for tool_name, info in list(self.sessions.items()):
             try:
-                await info['session'].__aexit__(None, None, None)
+                session = info.get('session')
+                if session:
+                    # Exit the session context manager properly
+                    try:
+                        await session.__aexit__(None, None, None)
+                    except:
+                        # Ignore cancel scope errors - sessions may already be closed
+                        pass
             except Exception as e:
-                print(f"  ⚠️  Error closing session {tool_name}: {e}")
-
-        # Then close transports
-        for tool_name, stdio_context in self.transports.items():
+                # Only log real errors, not cleanup issues
+                if "cancel scope" not in str(e).lower():
+                    print(f"  ⚠️  Error closing session {tool_name}: {e}")
+        
+        # Step 2: Give a moment for sessions to fully close
+        await asyncio.sleep(0.1)
+        
+        # Step 3: Close transports and wait for processes
+        for tool_name, stdio_context in list(self.transports.items()):
             try:
-                await stdio_context.__aexit__(None, None, None)
+                # Exit the transport context manager
+                try:
+                    await stdio_context.__aexit__(None, None, None)
+                except:
+                    # Suppress transport cleanup errors on Windows
+                    pass
                 print(f"  ✓ {tool_name} closed")
             except Exception as e:
-                print(f"  ⚠️  Error closing {tool_name}: {e}")
+                if "cancel scope" not in str(e).lower():
+                    print(f"  ⚠️  Error closing {tool_name}: {e}")
+        
+        # Step 4: Clear references
+        self.sessions.clear()
+        self.transports.clear()
+        self.tool_schemas.clear()
+        
+        # Step 5: Give asyncio time to cleanup transports
+        await asyncio.sleep(0.2)

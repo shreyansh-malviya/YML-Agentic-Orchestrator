@@ -3,24 +3,6 @@
 # Scenario: Analyze popular Python repos, calculate statistics, generate visualization code
 
 # MCP Tools Configuration
-tools:
-  github:
-    server: "python"
-    args:
-      - "simple_github_mcp_server.py"
-    env: {}
-  
-  calculator:
-    server: "python"
-    args:
-      - "simple_calculator_mcp_server.py"
-    env: {}
-  
-  filesystem:
-    server: "python"
-    args:
-      - "simple_mcp_server.py"
-    env: {}
 
 agents:
   - id: "github_researcher"

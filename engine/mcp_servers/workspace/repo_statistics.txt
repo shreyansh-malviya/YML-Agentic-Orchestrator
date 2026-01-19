@@ -1,0 +1,3 @@
+Average stars across all repos: 43000
+Total stars: 167000
+Percentage of total stars that pandas has: 26.95%

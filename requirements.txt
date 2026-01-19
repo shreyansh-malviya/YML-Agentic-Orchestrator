@@ -1,8 +1,43 @@
-# Core MCP dependencies
+# ============================================
+# YML-Agentic-Orchestrator Requirements
+# Recommended: Python 3.12
+# ============================================
+
+# ──────────────────────────────────────────
+# Core Dependencies
+# ──────────────────────────────────────────
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+numpy>=1.24.0
+
+# ──────────────────────────────────────────
+# RAG & Embeddings (for memory.py)
+# ──────────────────────────────────────────
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4
+
+# ──────────────────────────────────────────
+# MCP (Model Context Protocol)
+# ──────────────────────────────────────────
 mcp>=1.0.0
 anyio>=3.0.0
-
-# Optional: FastMCP for faster server implementation
 fastmcp>=2.0.0
 
-# Add other project dependencies here
+# ──────────────────────────────────────────
+# LLM Providers (Optional - Install as needed)
+# ──────────────────────────────────────────
+# google-generativeai>=0.3.0  # For Gemini
+# openai>=1.0.0               # For OpenAI and Grok (xAI)
+# anthropic>=0.18.0           # For Claude
+# groq>=0.4.0                 # For Groq
+
+# ──────────────────────────────────────────
+# HTTP & Utilities
+# ──────────────────────────────────────────
+requests>=2.31.0
+
+# ──────────────────────────────────────────
+# Development & Testing (Optional)
+# ──────────────────────────────────────────
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0

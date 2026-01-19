@@ -29,7 +29,7 @@ async def custom_stdio_client(params: StdioServerParameters):
         params: Server parameters including command, args, and environment
         
     Yields:
-        Tuple of (read_stream, write_stream) for session communication
+        Tuple of (read_stream, write_stream, process) for session communication and cleanup
     """
     command = params.command
     args = params.args
@@ -121,7 +121,7 @@ async def custom_stdio_client(params: StdioServerParameters):
     ]
     
     try:
-        yield read_stream, write_stream
+        yield read_stream, write_stream, process  # Return process for tracking
     finally:
         # Cleanup sequence for proper resource management
         
@@ -194,6 +194,7 @@ class MCPManager:
         self.sessions = {}
         self.tool_schemas = {}
         self.transports = {}
+        self.processes = {}  # Track subprocess instances for proper cleanup
     
     async def initialize(self):
         """Start all MCP servers and extract tool schemas"""
@@ -233,8 +234,9 @@ class MCPManager:
         # Create and enter the context manager manually
         # Use our custom client instead of library one
         stdio_context = custom_stdio_client(server_params)
-        read, write = await stdio_context.__aenter__()
+        read, write, process = await stdio_context.__aenter__()
         self.transports[tool_name] = stdio_context
+        self.processes[tool_name] = process  # Store process for proper cleanup
         
         # Create session using the transport
         session = ClientSession(read, write)
@@ -371,43 +373,88 @@ class MCPManager:
         """Cleanup all MCP servers with proper resource management"""
         logger.info("Shutting down MCP servers...")
         
-        # Step 1: Close sessions gracefully
-        for tool_name, info in list(self.sessions.items()):
+        try:
+            # Step 1: Close sessions gracefully
+            for tool_name, info in list(self.sessions.items()):
+                try:
+                    session = info.get('session')
+                    if session:
+                        try:
+                            await session.__aexit__(None, None, None)
+                        except Exception:
+                            pass  # Ignore session cleanup errors
+                except Exception as e:
+                    if "cancel scope" not in str(e).lower():
+                        logger.debug(f"Error closing session {tool_name}: {e}")
+            
+            # Step 2: Terminate processes before closing transports
+            for tool_name, process in list(self.processes.items()):
+                try:
+                    if process and process.returncode is None:
+                        # Close stdin to signal graceful shutdown
+                        try:
+                            if process.stdin and not process.stdin.is_closing():
+                                process.stdin.close()
+                        except Exception:
+                            pass
+                        
+                        # Terminate the process
+                        try:
+                            process.terminate()
+                            # Wait briefly for graceful termination
+                            await asyncio.wait_for(process.wait(), timeout=1.0)
+                        except asyncio.TimeoutError:
+                            # Force kill if needed
+                            try:
+                                process.kill()
+                                await asyncio.wait_for(process.wait(), timeout=1.0)
+                            except Exception:
+                                pass
+                        except Exception:
+                            pass
+                        
+                        logger.debug(f"Process {tool_name} terminated")
+                except Exception as e:
+                    logger.debug(f"Error terminating process {tool_name}: {e}")
+            
+            # Step 3: Give processes time to fully exit
             try:
-                session = info.get('session')
-                if session:
-                    # Exit the session context manager properly
-                    try:
-                        await session.__aexit__(None, None, None)
-                    except:
-                        # Ignore cancel scope errors - sessions may already be closed
-                        pass
-            except Exception as e:
-                # Only log real errors, not cleanup issues
-                if "cancel scope" not in str(e).lower():
-                    print(f"  ⚠️  Error closing session {tool_name}: {e}")
-        
-        # Step 2: Give a moment for sessions to fully close
-        await asyncio.sleep(0.1)
-        
-        # Step 3: Close transports and wait for processes
-        for tool_name, stdio_context in list(self.transports.items()):
-            try:
-                # Exit the transport context manager
+                await asyncio.sleep(0.1)
+            except asyncio.CancelledError:
+                pass
+            
+            # Step 4: Close transports (this will cleanup streams)
+            for tool_name, stdio_context in list(self.transports.items()):
                 try:
                     await stdio_context.__aexit__(None, None, None)
-                except:
-                    # Suppress transport cleanup errors on Windows
-                    pass
-                print(f"  ✓ {tool_name} closed")
-            except Exception as e:
-                if "cancel scope" not in str(e).lower():
-                    print(f"  ⚠️  Error closing {tool_name}: {e}")
-        
-        # Step 4: Clear references
-        self.sessions.clear()
-        self.transports.clear()
-        self.tool_schemas.clear()
-        
-        # Step 5: Give asyncio time to cleanup transports
-        await asyncio.sleep(0.2)
+                    print(f"  ✓ {tool_name} closed")
+                except Exception as e:
+                    if "cancel scope" not in str(e).lower() and "closed pipe" not in str(e).lower():
+                        logger.debug(f"Error closing transport {tool_name}: {e}")
+            
+            # Step 5: Clear all references
+            self.sessions.clear()
+            self.transports.clear()
+            self.tool_schemas.clear()
+            self.processes.clear()
+            
+            # Step 6: Final cleanup delay
+            try:
+                await asyncio.sleep(0.1)
+            except asyncio.CancelledError:
+                pass
+                
+        except asyncio.CancelledError:
+            # If shutdown itself is cancelled, ensure cleanup still happens
+            logger.warning("Shutdown cancelled, forcing cleanup...")
+            self.sessions.clear()
+            self.transports.clear()
+            self.tool_schemas.clear()
+            self.processes.clear()
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
+            # Ensure cleanup happens even on error
+            self.sessions.clear()
+            self.transports.clear()
+            self.tool_schemas.clear()
+            self.processes.clear()

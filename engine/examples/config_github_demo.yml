@@ -6,7 +6,7 @@ tools:
   github:
     server: "python"
     args:
-      - "simple_github_mcp_server.py"
+      - "engine/mcp_servers/simple_github_mcp_server.py"
     env: {}
 
 agents:

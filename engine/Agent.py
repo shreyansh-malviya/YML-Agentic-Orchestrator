@@ -72,7 +72,7 @@ def setup_logging():
 
 def load_yaml_data(file_path):
     """Load and parse YAML configuration file"""
-    logger.info(f"Loading YAML configuration from: {file_path}")
+    logger.info(f"Loading YAML configuration from: {file_path}") # type: ignore
     start_time = datetime.now()
     
     try:
@@ -80,9 +80,9 @@ def load_yaml_data(file_path):
         data = parser.parse()
         
         elapsed = (datetime.now() - start_time).total_seconds()
-        logger.info(f"YAML loaded successfully in {elapsed:.2f}s")
+        logger.info(f"YAML loaded successfully in {elapsed:.2f}s") # type: ignore
         logger.debug(f"Configuration contains {len(data.get('agents', []))} agents")
-        logger.debug(f"Workflow type: {data.get('workflow', {}).get('type', 'unknown')}")
+        logger.debug(f"Workflow type: {data.get('workflow', {}).get('type', 'unknown')}") # type: ignore
         
         return data
     except Exception as e:
@@ -92,7 +92,7 @@ def load_yaml_data(file_path):
 
 def clear_context():
     """Clear/reset the context file for a fresh start"""
-    logger.info("Clearing context for fresh workflow start")
+    logger.info("Clearing context for fresh workflow start") # type: ignore
     start_time = datetime.now()
     
     # Clear JSON backup file (thread-safe)
@@ -687,13 +687,20 @@ def run_agent(yaml_file):
             
             raise
         finally:
-            # Cleanup MCP manager
+            # Cleanup MCP manager (suppress cancellation errors)
             if mcp_manager:
-                await mcp_manager.shutdown()
+                try:
+                    await mcp_manager.shutdown()
+                except asyncio.CancelledError:
+                    logger.debug("MCP shutdown cancelled (expected during cleanup)")
+                except Exception as e:
+                    logger.warning(f"Error during MCP shutdown: {e}")
     
     # Run the async workflow
     try:
         asyncio.run(async_workflow())
+    except KeyboardInterrupt:
+        logger.info("Workflow interrupted by user")
     except Exception:
         # Exception already logged in async_workflow
         raise

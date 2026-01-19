@@ -6,7 +6,7 @@ tools:
   filesystem:
     server: "python"
     args:
-      - "simple_mcp_server.py"
+      - "engine/mcp_servers/simple_mcp_server.py"
     env: {}
 
 agents:

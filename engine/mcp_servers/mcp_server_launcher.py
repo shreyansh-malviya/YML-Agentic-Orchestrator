@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # Launch server in a completely fresh Python process
     # This avoids inheriting the parent's asyncio state
     result = subprocess.run(
-        [sys.executable, "-u", "simple_mcp_server.py"],
+        [sys.executable, "-u", "engine/mcp_servers/simple_mcp_server.py"],
         stdin=sys.stdin,
         stdout=sys.stdout,
         stderr=sys.stderr,

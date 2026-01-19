@@ -17,7 +17,7 @@ async def test_calculator():
     
     server_params = StdioServerParameters(
         command=sys.executable,
-        args=["simple_calculator_mcp_server.py"],
+        args=["engine/mcp_servers/simple_calculator_mcp_server.py"],
         env={}
     )
     

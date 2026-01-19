@@ -35,7 +35,7 @@ mcp_tools:
   filesystem:
     server: "python"
     args:
-      - "mcp_filesystem_server.py"
+      - "engine/mcp_servers/mcp_filesystem_server.py"
     env: {}
 
   # Add more servers as needed

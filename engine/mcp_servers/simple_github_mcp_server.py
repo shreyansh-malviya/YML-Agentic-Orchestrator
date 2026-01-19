@@ -127,6 +127,39 @@ async def list_tools() -> list[types.Tool]:
                 },
                 "required": ["owner", "repo", "filepath"]
             }
+        ),
+        types.Tool(
+            name="create_issue",
+            description="Create a new issue in a GitHub repository",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "owner": {
+                        "type": "string",
+                        "description": "Repository owner (username or organization)"
+                    },
+                    "repo": {
+                        "type": "string",
+                        "description": "Repository name"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Issue title"
+                    },
+                    "body": {
+                        "type": "string",
+                        "description": "Issue description/body",
+                        "default": ""
+                    },
+                    "labels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Labels to apply to the issue",
+                        "default": []
+                    }
+                },
+                "required": ["owner", "repo", "title"]
+            }
         )
     ]
 
@@ -155,6 +188,15 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
                 repo=arguments["repo"],
                 filepath=arguments["filepath"],
                 branch=arguments.get("branch", "")
+            )
+        
+        elif name == "create_issue":
+            return await create_issue(
+                owner=arguments["owner"],
+                repo=arguments["repo"],
+                title=arguments["title"],
+                body=arguments.get("body", ""),
+                labels=arguments.get("labels", [])
             )
         
         else:
@@ -325,6 +367,69 @@ async def read_file_content(owner: str, repo: str, filepath: str, branch: str = 
             return [types.TextContent(
                 type="text",
                 text=f"✗ File not found: {owner}/{repo}/{filepath}"
+            )]
+        raise
+    except requests.exceptions.RequestException as e:
+        return [types.TextContent(
+            type="text",
+            text=f"✗ GitHub API error: {str(e)}"
+        )]
+
+
+async def create_issue(owner: str, repo: str, title: str, body: str = "", labels: list = None) -> list[types.TextContent]:
+    """Create a new issue in a GitHub repository"""
+    try:
+        if not GITHUB_TOKEN:
+            return [types.TextContent(
+                type="text",
+                text="✗ Authentication required: GITHUB_TOKEN environment variable not set. Cannot create issues without authentication."
+            )]
+        
+        url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues"
+        
+        payload = {
+            "title": title,
+            "body": body
+        }
+        
+        if labels:
+            payload["labels"] = labels
+        
+        response = requests.post(url, headers=_get_headers(), json=payload, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        result = (
+            f"✓ Issue created successfully!\n"
+            f"📋 #{data['number']}: {data['title']}\n"
+            f"👤 Created by: {data['user']['login']}\n"
+            f"🔗 URL: {data['html_url']}\n"
+        )
+        
+        if labels:
+            result += f"🏷️  Labels: {', '.join(labels)}\n"
+        
+        return [types.TextContent(
+            type="text",
+            text=result
+        )]
+    
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            return [types.TextContent(
+                type="text",
+                text=f"✗ Repository not found: {owner}/{repo}"
+            )]
+        elif e.response.status_code == 401:
+            return [types.TextContent(
+                type="text",
+                text="✗ Authentication failed. Check your GITHUB_TOKEN."
+            )]
+        elif e.response.status_code == 403:
+            return [types.TextContent(
+                type="text",
+                text="✗ Forbidden. You may not have permission to create issues in this repository."
             )]
         raise
     except requests.exceptions.RequestException as e:

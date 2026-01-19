@@ -260,17 +260,17 @@ class YAMLParser:
             self.parsed_data['tools'] = {
                 'github': {
                     'server': 'python',
-                    'args': ['simple_github_mcp_server.py'],
+                    'args': ['engine/mcp_servers/simple_github_mcp_server.py'],
                     'env': {}
                 },
                 'calculator': {
                     'server': 'python',
-                    'args': ['simple_calculator_mcp_server.py'],
+                    'args': ['engine/mcp_servers/simple_calculator_mcp_server.py'],
                     'env': {}
                 },
                 'filesystem': {
                     'server': 'python',
-                    'args': ['simple_mcp_server.py'],
+                    'args': ['engine/mcp_servers/simple_mcp_server.py'],
                     'env': {}
                 }
             }

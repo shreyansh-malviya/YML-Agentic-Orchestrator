@@ -1,0 +1,1 @@
+print('Math Test'); print('Fibonacci 10th:', 55); print('Factorial 5:', 120); print('Pythagorean 3-4-5:', 5.0)

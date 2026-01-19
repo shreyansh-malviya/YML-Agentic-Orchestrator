@@ -1,0 +1,36 @@
+
+agents:
+  - id: coordinator_agent_1
+    role: Coordinator Agent
+    goal: Coordinate agents to generate a climate risk briefing
+    model: llama-3.1-8b-instant
+    instruction: |
+      Delegate research, analysis, and summarization tasks.
+      Merge outputs into a final structured briefing.
+
+  - id: researcher_agent_1
+    role: Research Assistant
+    goal: Collect climate risk data for coastal cities
+    model: llama-3.1-8b-instant
+    tools:
+      - text-editor
+
+  - id: analyst_agent_1
+    role: Data Analyst
+    goal: Analyze collected climate data and detect patterns
+    model: llama-3.1-8b-instant
+
+  - id: writer_agent_1
+    role: Content Writer
+    goal: Produce a final climate risk briefing
+    model: llama-3.1-8b-instant
+    instruction: |
+      Summarize research and analysis into an executive-ready briefing.
+
+workflow:
+  type: sequential
+  steps:
+    - coordinator_agent_1
+    - researcher_agent_1
+    - analyst_agent_1
+    - writer_agent_1

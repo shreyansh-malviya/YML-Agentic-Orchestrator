@@ -1,0 +1,39 @@
+
+agents:
+  - id: coordinator_agent_1
+    role: Coordinator Agent
+    goal: Coordinate analysis on AI in education
+    model: llama-3.1-8b-instant
+
+  - id: researcher_agent_1
+    role: Research Assistant
+    goal: Research AI-powered personalized learning platforms
+    model: llama-3.1-8b-instant
+
+  - id: analyst_agent_1
+    role: Data Analyst
+    goal: Analyze adoption trends in AI learning platforms
+    model: llama-3.1-8b-instant
+
+  - id: writer_agent_1
+    role: Content Writer
+    goal: Draft a synthesis on AI in education
+    model: llama-3.1-8b-instant
+
+  - id: reviewer_agent_1
+    role: Reviewer Agent
+    goal: Consolidate outputs and produce a final report
+    model: llama-3.1-8b-instant
+
+workflow:
+  type: parallel
+  branches:
+    - coordinator_agent_1
+    - researcher_agent_1
+    - analyst_agent_1
+    - writer_agent_1
+  then:
+    agent: reviewer_agent_1
+
+
+

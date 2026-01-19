@@ -1,0 +1,34 @@
+agents:
+  - id: coordinator_agent_1
+    role: Coordinator Agent
+    goal: Coordinate repository research and analysis
+    model: llama-3.1-8b-instant
+
+  - id: researcher_agent_1
+    role: Research Assistant
+    goal: Gather GitHub repository metrics and activity signals
+    model: llama-3.1-8b-instant
+    tools:
+      - Github
+      - text-editor
+
+  - id: analyst_agent_1
+    role: Data Analyst
+    goal: Analyze repository metrics using python
+    model: llama-3.1-8b-instant
+    tools:
+      - python
+
+
+  - id: writer_agent_1
+    role: Content Writer
+    goal: Produce final report summarizing repo health and activity
+    model: llama-3.1-8b-instant
+
+workflow:
+  type: sequential
+  steps:
+    - coordinator_agent_1
+    - researcher_agent_1
+    - analyst_agent_1
+    - writer_agent_1

@@ -7,3 +7,4 @@ engine/__pycache__
 engine/context
 engine/logs
 engine/__pycache__/*.pyc
+workspace/*

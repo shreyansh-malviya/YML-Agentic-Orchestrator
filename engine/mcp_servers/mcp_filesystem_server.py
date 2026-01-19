@@ -25,8 +25,8 @@ from pathlib import Path
 # Create FastMCP server instance
 server = FastMCP("Filesystem Tools")
 
-# Define workspace directory
-WORKSPACE_DIR = Path(__file__).parent / "workspace"
+# Define workspace directory - use root workspace to avoid disturbing mcp_servers folder
+WORKSPACE_DIR = Path(__file__).parent.parent.parent / "workspace"
 WORKSPACE_DIR.mkdir(exist_ok=True)
 
 

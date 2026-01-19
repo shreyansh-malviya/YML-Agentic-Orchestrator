@@ -35,8 +35,8 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 import mcp.types as types
 
-# Workspace directory
-WORKSPACE_DIR = Path(__file__).parent / "workspace"
+# Workspace directory - use root workspace to avoid disturbing mcp_servers folder
+WORKSPACE_DIR = Path(__file__).parent.parent.parent / "workspace"
 WORKSPACE_DIR.mkdir(exist_ok=True)
 
 

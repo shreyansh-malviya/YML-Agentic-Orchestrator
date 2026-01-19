@@ -1,3 +1,0 @@
-Average stars: 39000
-Total stars: 154000
-Percentage of total stars that pandas has: 29.22
